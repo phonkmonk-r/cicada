@@ -34,7 +34,7 @@ A key's public key stays hidden until it signs. After that it is public forever.
 - **App.** Cicada reads which key is current from the chain, signs with it, executes when it is your turn, stages your next keys, and funds the signing key with just enough gas, then sweeps the rest back.
 - **Escape hatch.** A transaction that is exactly `setGuard(0)` removes the guard without rotating; its signers' keys count as burned.
 
-[ARCHITECT.md](ARCHITECT.md) covers the contract, packages and app in detail. [PLAN.md](PLAN.md) has the design decisions and what is next.
+[ARCHITECT.md](ARCHITECT.md) covers the contract, packages and app in detail. [PLAN.md](PLAN.md) has the v1 scope, design decisions and progress; [ROADMAP.md](ROADMAP.md) has optional future work.
 
 ## Screenshots
 
