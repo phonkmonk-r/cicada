@@ -433,6 +433,13 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
 
   it("removes the profile and its files from this computer", async () => {
     await page.getByRole("button", { name: "Lock", exact: true }).click();
+    // A wrong password shakes the card, empties the field and leaves it focused for another try.
+    const password = page.getByLabel("Password", { exact: true });
+    await password.fill("not the password");
+    await page.getByRole("button", { name: "Unlock" }).click();
+    await page.getByText("Wrong password").waitFor();
+    assert.equal(await password.inputValue(), "");
+    await page.waitForFunction(() => (document.activeElement as HTMLInputElement | null)?.type === "password");
     await page.getByRole("button", { name: "Use another profile" }).click();
     await page.getByRole("heading", { name: "Choose a profile" }).waitFor();
     await page.getByRole("button", { name: "Remove Signer 1" }).click();

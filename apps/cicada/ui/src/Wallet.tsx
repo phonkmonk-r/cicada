@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { desktop, type ProfileView } from "./api";
 import { short } from "./format";
 import { checkedWordsMatch, newSeedPhrase, pickCheckedWords, positionsLabel, SEED_LENGTHS, type SeedLength } from "./lib/newSeed";
 import { MIN_PASSWORD, profileFormProblems, seedWordCount } from "./lib/profileForm";
-import { IconPlus } from "./icons";
+import { IconAlert, IconPlus } from "./icons";
 import { Avatar, Badge } from "./ui";
 
 type Kind = "seed" | "new" | "ledger";
@@ -366,6 +366,8 @@ export function UnlockWallet({ name, operator, onDone, onSwitch }: { name: strin
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
   const [working, setWorking] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
 
   async function submit() {
     setWorking(true);
@@ -376,6 +378,10 @@ export function UnlockWallet({ name, operator, onDone, onSwitch }: { name: strin
       onDone();
     } catch (caught) {
       setError((caught as Error).message);
+      // Like the macOS login window: the card shakes, the field empties and is ready for another try.
+      setShaking(true);
+      setPassword("");
+      requestAnimationFrame(() => input.current?.focus());
     } finally {
       setWorking(false);
     }
@@ -383,7 +389,10 @@ export function UnlockWallet({ name, operator, onDone, onSwitch }: { name: strin
 
   return (
     <form
-      className="auth-card narrow"
+      className={`auth-card narrow ${shaking ? "shake" : ""}`}
+      onAnimationEnd={(e) => {
+        if (e.animationName === "auth-shake") setShaking(false);
+      }}
       onSubmit={(e) => {
         e.preventDefault();
         void submit();
@@ -392,9 +401,26 @@ export function UnlockWallet({ name, operator, onDone, onSwitch }: { name: strin
       {operator && <ProfileHeader name={name} operator={operator} />}
       <label className="field">
         <span className="field-label">Password</span>
-        <input type="password" autoFocus autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input
+          ref={input}
+          type="password"
+          autoFocus
+          autoComplete="current-password"
+          value={password}
+          aria-invalid={error !== undefined}
+          aria-describedby={error ? "unlock-error" : undefined}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setError(undefined);
+          }}
+        />
       </label>
-      {error && <div className="note critical">{error.charAt(0).toUpperCase() + error.slice(1)}</div>}
+      {error && (
+        <p id="unlock-error" className="field-error" role="alert">
+          <IconAlert width="13" height="13" />
+          {error === "wrong password" ? "Wrong password. Try again." : error.charAt(0).toUpperCase() + error.slice(1)}
+        </p>
+      )}
       <button type="submit" className="primary block" disabled={password === "" || working}>
         {working ? "Unlocking…" : "Unlock"}
       </button>

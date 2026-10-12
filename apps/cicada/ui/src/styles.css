@@ -226,6 +226,36 @@ select:focus {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* An error belongs to its field: the field turns red and a short line sits right under it. */
+input[aria-invalid="true"],
+input[aria-invalid="true"]:focus {
+  border-color: var(--critical);
+  box-shadow: 0 0 0 3px var(--critical-soft);
+}
+
+/* Pulled up to the field it explains, closer than the card's usual gap. */
+.field-error {
+  margin-top: calc(var(--space-8) - var(--space-16));
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--critical);
+  animation: field-error-in var(--dur-med) var(--ease-out) both;
+}
+
+.field-error svg {
+  flex: none;
+}
+
+@keyframes field-error-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
 textarea {
   font-family: var(--mono);
   font-size: var(--text-md);
@@ -239,6 +269,8 @@ textarea {
 }
 
 .auth {
+  position: relative;
+  isolation: isolate;
   min-height: 100%;
   display: flex;
   flex-direction: column;
@@ -274,21 +306,22 @@ textarea {
   --intro-delay: 1500ms;
 }
 
-.intro-backdrop {
-  position: absolute;
+/* Fixed, so it stays put behind auth screens that scroll. */
+.backdrop {
+  position: fixed;
   inset: -25%;
   z-index: -1;
   filter: blur(90px) saturate(140%);
-  animation: intro-backdrop 1.8s var(--ease-out) both;
+  animation: backdrop-in 1.8s var(--ease-out) both;
 }
 
-.intro-backdrop span {
+.backdrop span {
   position: absolute;
   border-radius: 50%;
   opacity: 0.32;
 }
 
-.intro-backdrop span:nth-child(1) {
+.backdrop span:nth-child(1) {
   width: 55vmax;
   height: 55vmax;
   left: 12%;
@@ -296,7 +329,7 @@ textarea {
   background: var(--accent);
 }
 
-.intro-backdrop span:nth-child(2) {
+.backdrop span:nth-child(2) {
   width: 42vmax;
   height: 42vmax;
   right: 14%;
@@ -305,7 +338,7 @@ textarea {
   opacity: 0.26;
 }
 
-.intro-backdrop span:nth-child(3) {
+.backdrop span:nth-child(3) {
   width: 48vmax;
   height: 48vmax;
   left: 38%;
@@ -315,11 +348,11 @@ textarea {
 }
 
 @media (prefers-color-scheme: dark) {
-  .intro-backdrop span {
+  .backdrop span {
     opacity: 0.18;
   }
 
-  .intro-backdrop span:nth-child(n + 2) {
+  .backdrop span:nth-child(n + 2) {
     opacity: 0.12;
   }
 }
@@ -456,7 +489,7 @@ textarea {
   -webkit-app-region: drag;
 }
 
-@keyframes intro-backdrop {
+@keyframes backdrop-in {
   from {
     opacity: 0;
     transform: scale(0.9);
@@ -526,7 +559,7 @@ textarea {
 /* No travel or blur: the logo sits at the top and pages cross-fade. */
 @media (prefers-reduced-motion: reduce) {
   .intro-logo,
-  .intro-backdrop {
+  .backdrop {
     animation: none;
   }
 
@@ -544,7 +577,7 @@ textarea {
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .intro-backdrop {
+  .backdrop {
     display: none;
   }
 }
@@ -558,23 +591,107 @@ button.large {
 
 .auth-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: var(--space-10);
   font-weight: 650;
   font-size: var(--text-lg);
+  letter-spacing: -0.01em;
+  animation: auth-brand-in 700ms var(--ease-out) both;
 }
 
+.auth-brand svg {
+  filter: drop-shadow(0 10px 24px rgb(15 64 58 / 0.25));
+}
+
+/* A frosted card over the blurred field; it comes into focus as it appears. */
 .auth-card {
   width: 100%;
   max-width: 440px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 20px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), var(--shadow-float);
   padding: var(--space-32);
   display: flex;
   flex-direction: column;
   gap: var(--space-16);
+  animation: auth-card-in 600ms var(--ease-out) 120ms both;
+}
+
+@media (prefers-color-scheme: dark) {
+  .auth-card {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), var(--shadow-float);
+  }
+}
+
+/* The entrance stays first in the list, so the browser keeps it as finished instead of replaying it. */
+.auth-card.shake {
+  animation:
+    auth-card-in 600ms var(--ease-out) 120ms both,
+    auth-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* Already on screen from the intro, or simply part of the sign-in screen: no second fade. */
+.auth .backdrop {
+  animation: none;
+}
+
+@keyframes auth-brand-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+    filter: blur(8px);
+  }
+}
+
+@keyframes auth-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+    filter: blur(10px);
+  }
+}
+
+@keyframes auth-shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: translateX(-12px);
+  }
+  30% {
+    transform: translateX(10px);
+  }
+  45% {
+    transform: translateX(-7px);
+  }
+  60% {
+    transform: translateX(5px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-brand,
+  .auth-card,
+  .auth-card.shake,
+  .field-error {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .auth-card {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 .auth-card.narrow {

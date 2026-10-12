@@ -16,7 +16,7 @@ import { Overview } from "./pages/Overview";
 import { Settings } from "./pages/Settings";
 import { Signers } from "./pages/Signers";
 import { Transactions } from "./pages/Transactions";
-import { Avatar, SoleSignerContext } from "./ui";
+import { Avatar, Backdrop, SoleSignerContext } from "./ui";
 import { AddProfile, ConnectLedger, ProfilePicker, UnlockWallet } from "./Wallet";
 
 export function App() {
@@ -154,8 +154,9 @@ export function App() {
 function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="auth">
+      <Backdrop />
       <div className="auth-brand">
-        <Logo />
+        <Logo size={56} />
         <span>Cicada</span>
       </div>
       {children}

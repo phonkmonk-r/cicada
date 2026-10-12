@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import { IconKey, IconLock, IconRefresh, IconSigners, Logo } from "./icons";
+import { Backdrop } from "./ui";
 
 interface IntroPage {
   icon?: ReactNode;
@@ -67,11 +68,7 @@ export function Welcome({ onStart }: { onStart: () => void }) {
   const current = PAGES[page]!;
   return (
     <div className={`intro ${opening ? "opening" : ""}`}>
-      <div className="intro-backdrop" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
+      <Backdrop />
 
       <button type="button" className="intro-skip link-button" onClick={onStart}>
         Skip

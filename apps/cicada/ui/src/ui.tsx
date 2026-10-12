@@ -3,6 +3,17 @@ import { createContext, type ReactNode, useContext, useState } from "react";
 import { explorer, short } from "./format";
 import { IconCheck, IconCopy, IconExternal } from "./icons";
 
+/** Soft, heavily blurred fields of the brand colours behind the intro and the sign-in screens. */
+export function Backdrop() {
+  return (
+    <div className="backdrop" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+    </div>
+  );
+}
+
 /** A small deterministic colour disc for an address, so signers are recognisable at a glance. */
 export function Avatar({ address, size = 28 }: { address: string; size?: number }) {
   const hue = parseInt(address.slice(2, 8), 16) % 360;
