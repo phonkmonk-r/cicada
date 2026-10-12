@@ -11,4 +11,4 @@ cache/
 graphify-out/
 broadcast/
 test/RotationGuard.poc.t.sol
-signer/scripts/_*.ts
+apps/cicada/scripts/_*.ts

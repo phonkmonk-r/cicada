@@ -27,7 +27,7 @@ import { plainSafeTx, safeTxHash } from "../src/safetx.js";
 import { assess, readSafeState } from "../src/state.js";
 import { createTreeFile, loadTreeFile, slotConfig, stageEntries, type TreeFile } from "../src/tree.js";
 
-const OUT = new URL("../../../out/", import.meta.url);
+const OUT = new URL("../../../contracts/out/", import.meta.url);
 const PORT = 8547;
 const RPC = `http://127.0.0.1:${PORT}`;
 const TEST_MNEMONIC = "test test test test test test test test test test test junk";

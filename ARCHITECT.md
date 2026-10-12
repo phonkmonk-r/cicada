@@ -34,13 +34,12 @@ Concretely:
 
 | Piece | Where | Role |
 |---|---|---|
-| RotationGuard | `src/` | The contract. Enforces the signing rules and rotates signers in the same transaction. |
+| RotationGuard | `contracts/src/` | The contract. Enforces the signing rules and rotates signers in the same transaction. |
 | core | `packages/core` | Pure TypeScript shared by everything: tree format, Safe and guard calldata, state reading, rules engine, Transaction Service client, proposals, Safe creation. |
 | keys | `packages/keys` | Key sources (seed, Ledger), derivation paths, finding the current owner key, finding a signer's slot. |
-| generator | `generator` | Command-line tool that derives a tree file and prints proofs (the original, manual flow). |
-| signer | `signer` | Cicada: the signing session (`src`), the desktop app (`desktop`), and its UI (`ui`). Also the `rotation-signer` command-line server. |
-| app | `app` | The original Safe App (dashboard and install wizard inside Safe{Wallet}). Superseded by Cicada for daily use, kept for installing through Safe{Wallet}. |
-| tests, scripts | `test`, `script`, `demo` | Solidity suites, deployment script, local demo. |
+| generator | `packages/generator` | Command-line tool that derives a tree file and prints proofs (the original, manual flow). |
+| cicada | `apps/cicada` | Cicada: the signing session (`src`), the desktop app (`desktop`), and its UI (`ui`). Also the `rotation-signer` command-line server. |
+| tests, scripts | `contracts/test`, `contracts/script`, `contracts/demo` | Solidity suites, deployment script, local demo. |
 
 ### The life of a Safe
 
@@ -52,21 +51,21 @@ Concretely:
 ## 2. Repository map
 
 ```
-src/RotationGuard.sol            the contract
-src/interfaces/IRotationGuard.sol its interface, structs, events, errors
-test/                            Solidity tests (unit, fork, SafeL2, fuzz, invariants, gas, generator vectors)
-script/                          DeployGuard (singleton deployment), Demo (local fork demo)
-demo/run.sh                      end-to-end local demo on an Anvil mainnet fork
+contracts/                       the Foundry project (foundry.toml, lib/ submodules, out/); run forge here
+contracts/src/RotationGuard.sol  the contract
+contracts/src/interfaces/        IRotationGuard: its interface, structs, events, errors
+contracts/test/                  Solidity tests (unit, fork, SafeL2, fuzz, invariants, gas, generator vectors)
+contracts/script/                DeployGuard (singleton deployment), Demo (local fork demo)
+contracts/demo/run.sh            end-to-end local demo on an Anvil mainnet fork
 packages/core/                   shared TypeScript logic (no keys, no network beyond a PublicClient)
 packages/keys/                   key sources and derivation
-generator/                       rotation-tree command-line tool
-signer/src/                      the signing session and everything it needs (no Electron)
-signer/desktop/                  Electron main process, preloads, vault, profiles, dApp browser
-signer/ui/                       React UI (shared by the desktop app and the local web server)
-signer/test/                     signer tests on a local Anvil chain with real Safe and guard contracts
-signer/ui/test/                  unit tests for the UI's logic (signer/ui/src/lib)
-signer/e2e/                      the desktop app driven by Playwright against Anvil and a fake Transaction Service
-app/                             the original Safe App
+packages/generator/              rotation-tree command-line tool
+apps/cicada/src/                 the signing session and everything it needs (no Electron)
+apps/cicada/desktop/             Electron main process, preloads, vault, profiles, dApp browser
+apps/cicada/ui/                  React UI (shared by the desktop app and the local web server)
+apps/cicada/test/                session tests on a local Anvil chain with real Safe and guard contracts
+apps/cicada/ui/test/             unit tests for the UI's logic (apps/cicada/ui/src/lib)
+apps/cicada/e2e/                 the desktop app driven by Playwright against Anvil and a fake Transaction Service
 deployments/sepolia.json         deployed addresses on Sepolia
 PLAN.md                          design, decisions, progress
 ```
@@ -75,7 +74,7 @@ The TypeScript packages are npm workspaces. Packages export a `source` condition
 
 ## 3. The smart contract: RotationGuard
 
-`src/RotationGuard.sol`, Solidity 0.8.30, compiled with `via_ir`, optimizer 200 runs, EVM version Prague. About 10.3 KB of runtime code.
+`contracts/src/RotationGuard.sol`, Solidity 0.8.30, compiled with `via_ir`, optimizer 200 runs, EVM version Prague. About 10.3 KB of runtime code.
 
 ### 3.1 One contract, three roles, one deployment
 
@@ -87,7 +86,7 @@ A Safe 1.5.0 can attach three kinds of extensions. RotationGuard is all three at
 | **Module** | Safe executes calls the guard makes through `execTransactionFromModule` | Changing owners is an owner-only operation; as a module the guard can call `swapOwner`, `addOwnerWithThreshold` and `removeOwner` on the Safe. |
 | **Module guard** | `checkModuleTransaction` before every module call | So that no other module can ever bypass the guard, and the guard itself can only do owner management. |
 
-It is a **singleton**: deployed once per network (`script/DeployGuard.s.sol`; on Sepolia the current guard is `0x0f91…3391`, the first one `0xbE62…5E36` still serves the earliest Safes), with no owner, no admin and no upgrade path. Every Safe that installs it uses the same code; all per-Safe data is keyed by the Safe's address, and every state-changing function takes the Safe to be `msg.sender` (the Safe calling its own guard) except `stage`, which is permissionless but proof-gated. So one Safe can never touch another Safe's configuration, and creating a Safe never deploys a guard. The only constructor argument is the allowed MultiSendCallOnly address (immutable).
+It is a **singleton**: deployed once per network (`contracts/script/DeployGuard.s.sol`; on Sepolia the current guard is `0x0f91…3391`, the first one `0xbE62…5E36` still serves the earliest Safes), with no owner, no admin and no upgrade path. Every Safe that installs it uses the same code; all per-Safe data is keyed by the Safe's address, and every state-changing function takes the Safe to be `msg.sender` (the Safe calling its own guard) except `stage`, which is permissionless but proof-gated. So one Safe can never touch another Safe's configuration, and creating a Safe never deploys a guard. The only constructor argument is the allowed MultiSendCallOnly address (immutable).
 
 A new version is a new deployment at a new address; a Safe moves to it by removing the old guard (escape hatch) and installing the new one.
 
@@ -293,7 +292,7 @@ Keys never leave this package's sources: the seed stays in process memory, Ledge
 
 ## 6. generator: the rotation-tree command
 
-`generator/src/cli.ts`, the original manual flow, still useful for scripting and audits.
+`packages/generator/src/cli.ts`, the original manual flow, still useful for scripting and audits.
 
 - `generate`: derive a tree for a Safe and slot (two-level path by default, `--layout account|range` for earlier ones), from a seed file or a Ledger, and write the tree file.
 - `verify`: rebuild the root, compare it with an expected one, re-derive a sample of addresses.
@@ -303,7 +302,7 @@ Keys never leave this package's sources: the seed stays in process memory, Ledge
 
 ## 7. signer: Cicada
 
-### 7.1 signer/src: the signing session
+### 7.1 apps/cicada/src: the signing session
 
 Everything that signs, proposes, executes and maintains a slot. Runs inside the desktop app's main process or the `rotation-signer` command-line server; no UI code.
 
@@ -330,7 +329,7 @@ Everything that signs, proposes, executes and maintains a slot. Runs inside the 
 - **Checks:** `check` validates every proposal kind against chain state before anything is signed.
 - **Executions that never land:** every signature by an owner key is written to the signing log before it leaves the app (`logSigned`: key, slot, tree index, Safe nonce, safeTxHash, confirm or execute). Sent executions are saved with their account nonce and request (`saveAttempts`) and come back after a restart; the sweep watcher resumes with them. While an attempt is open, the queue item carries it (`QueueItem.attempt`), the rules engine refuses a second execution from the same key (`openAttempt`), and once the timeout passes the record turns `stuck` with a plain message. `speedUp` resends the same transaction from the same key and account nonce with fees raised at least 13%, so only one of the sends can ever be mined; `execution` checks every hash of the attempt and marks it `replaced` once the Safe moved past its nonce. `exposures` reads the log on every snapshot: a recorded key that is still an owner while its transaction is gone from the queue (an execution that never landed, a confirmation whose transaction was replaced) is an exposure, together with the confirmers of that transaction. `status` reports it (`exposure`, plus a critical finding) and the rules engine counts those keys like confirmations (`exposed`): with a full threshold exposed, only a force-rotate covering every exposed slot may be confirmed. `recover` proposes exactly that, at the current nonce so it also cancels the lost transaction; its signers rotate as usual.
 
-### 7.2 Cicada desktop (signer/desktop)
+### 7.2 Cicada desktop (apps/cicada/desktop)
 
 Electron. The UI runs sandboxed with no Node access; it can only call the handlers the preload exposes, and every handler checks the call comes from the app's own window.
 
@@ -344,7 +343,7 @@ Electron. The UI runs sandboxed with no Node access; it can only call the handle
 | `dapp-preload.cjs` | The bridge in dApp pages: injects an EIP-1193 wallet (`window.ethereum`, announced through EIP-6963) whose only capability is forwarding requests. |
 | `assets/` | The Cicada icon (SVG source, PNG, macOS `.icns`). |
 
-### 7.3 Cicada UI (signer/ui)
+### 7.3 Cicada UI (apps/cicada/ui)
 
 React, built with Vite; the same UI runs in the desktop app (through the preload bridge) and against the local web server (through HTTP).
 
@@ -371,7 +370,7 @@ React, built with Vite; the same UI runs in the desktop app (through the preload
 | `ui.tsx`, `icons.tsx`, `format.ts`, `styles.css` | Shared components, icons, formatting and the design tokens. |
 | `lib/` | The UI's logic as plain functions, unit tested in `ui/test`: contract-call parsing and encoding, profile form checks, new seed generation and backup check, slot package preview, execution state. Components keep only state and markup. |
 
-Tests: `npm test -w @rotating-msig/signer` runs the session, desktop and UI unit tests. `npm run test:app -w @rotating-msig/signer` builds the desktop app and drives it with Playwright (`playwright-core`, Electron mode): it starts Anvil with a guarded Safe whose keys use the app's two-level path, points the app at it through the `ROTATION_SIGNER_TEST_CHAIN` hook (registers the local chain, its contracts and a local Transaction Service), then adds a seed profile and joins, proposes, executes with gas funding and sweep, removes the profile, and creates a profile from a new seed (backup check included). Set `E2E_SCREENSHOTS` to a folder to keep a screenshot after each test. `npm run screenshots -w @rotating-msig/signer` (`scripts/screenshots.ts`) drives the same flow to regenerate the README images in `screenshots/`. Joining still probes mainnet and Sepolia public RPCs during network detection, so it needs internet.
+Tests: `npm test -w @rotating-msig/cicada` runs the session, desktop and UI unit tests. `npm run test:app -w @rotating-msig/cicada` builds the desktop app and drives it with Playwright (`playwright-core`, Electron mode): it starts Anvil with a guarded Safe whose keys use the app's two-level path, points the app at it through the `ROTATION_SIGNER_TEST_CHAIN` hook (registers the local chain, its contracts and a local Transaction Service), then adds a seed profile and joins, proposes, executes with gas funding and sweep, removes the profile, and creates a profile from a new seed (backup check included). Set `E2E_SCREENSHOTS` to a folder to keep a screenshot after each test. `npm run screenshots -w @rotating-msig/cicada` (`scripts/screenshots.ts`) drives the same flow to regenerate the README images in `screenshots/`. Joining still probes mainnet and Sepolia public RPCs during network detection, so it needs internet.
 
 ### 7.4 How the dApp browser works
 
@@ -444,11 +443,11 @@ Joining tries them in that order. Each derivation step has a fixed cost regardle
 
 | To change | Look in |
 |---|---|
-| A signing or rotation rule | `src/RotationGuard.sol` (`checkTransaction`, `checkAfterExecution`) and its tests; mirror it in `packages/core/src/rules.ts`. |
+| A signing or rotation rule | `contracts/src/RotationGuard.sol` (`checkTransaction`, `checkAfterExecution`) and its tests; mirror it in `packages/core/src/rules.ts`. |
 | What the app may propose | `packages/core/src/proposals.ts` (`buildProposal`) and `SignerSession.check`. |
-| How keys are derived | `packages/core/src/base.ts`, `tree.ts` (`treeKeyPath`), `signer/src/join.ts` (`keyLayouts`). |
+| How keys are derived | `packages/core/src/base.ts`, `tree.ts` (`treeKeyPath`), `apps/cicada/src/join.ts` (`keyLayouts`). |
 | The tree or leaf format | `packages/core/src/tree.ts` and `RotationGuard._leaf` together; regenerate the vectors. |
 | Execution, funding, sweep | `SignerSession.prepareExecution`, `sendExecution`, `execution`, `fund`, `sweep`. |
-| dApp behaviour | `signer/src/dapp.ts`, `signer/desktop/browser.ts`, `dapp-preload.cjs`. |
-| Supported networks and deployments | `packages/core/src/addresses.ts`, `signer/src/networks.ts`, `deployments/`. |
-| Desktop storage | `signer/desktop/profiles.ts`, `vault.ts`, settings handling in `main.ts`. |
+| dApp behaviour | `apps/cicada/src/dapp.ts`, `apps/cicada/desktop/browser.ts`, `dapp-preload.cjs`. |
+| Supported networks and deployments | `packages/core/src/addresses.ts`, `apps/cicada/src/networks.ts`, `deployments/`. |
+| Desktop storage | `apps/cicada/desktop/profiles.ts`, `vault.ts`, settings handling in `main.ts`. |
