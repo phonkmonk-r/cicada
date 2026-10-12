@@ -44,6 +44,11 @@ describe("coerce", () => {
     assert.throws(() => coerce(param("uint256"), ""), /whole number/);
   });
 
+  it("rejects JSON numbers too large to be exact, and takes them quoted", () => {
+    assert.throws(() => coerce(param("uint256[]"), "[123456789012345678]"), /put large numbers in quotes/);
+    assert.deepEqual(coerce(param("uint256[]"), '["123456789012345678", 7]'), [123456789012345678n, 7n]);
+  });
+
   it("checks booleans, addresses and bytes", () => {
     assert.equal(coerce(param("bool"), "true"), true);
     assert.equal(coerce(param("bool"), "false"), false);

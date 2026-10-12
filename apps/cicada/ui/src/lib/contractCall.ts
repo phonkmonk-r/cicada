@@ -36,6 +36,8 @@ export function coerce(param: AbiParameter, value: unknown): unknown {
   }
   const text = String(value ?? "").trim();
   if (type.startsWith("uint") || type.startsWith("int")) {
+    // JSON numbers above 2^53 were already rounded by JSON.parse.
+    if (typeof value === "number" && !Number.isSafeInteger(value)) throw new Error(`${label}: put large numbers in quotes`);
     if (!/^-?\d+$/.test(text)) throw new Error(`${label}: enter a whole number (base units)`);
     return BigInt(text);
   }

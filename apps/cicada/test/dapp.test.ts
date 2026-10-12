@@ -76,6 +76,8 @@ describe("dApp browser wallet", { skip }, () => {
     await rejectsWith(call("eth_signTypedData_v4", [chain.safe, "{}"]), 4200);
     await rejectsWith(call("eth_sendRawTransaction", ["0x00"]), 4200);
     await rejectsWith(call("eth_sendTransaction", [{ from: ALICE, to: BOB, value: "0x1" }]), 4100);
+    await rejectsWith(call("eth_sendTransaction", [{ from: chain.safe, to: BOB, value: "1.5" }]), -32602);
+    await assert.rejects(call("eth_getLogs", [{ fromBlock: "nonsense" }]), (error: ProviderError) => error instanceof ProviderError && !error.message.includes("127.0.0.1"));
     assert.equal(reviewed.length, 0, "nothing reached review");
   });
 

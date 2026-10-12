@@ -1,5 +1,5 @@
-import type { DappCall } from "@rotating-msig/core";
-import { getAddress, isAddress, isHex, keccak256, numberToHex, stringToHex, type Hex } from "viem";
+import { quantity, type DappCall } from "@rotating-msig/core";
+import { BaseError, getAddress, isAddress, isHex, keccak256, numberToHex, stringToHex, type Hex } from "viem";
 
 import type { DraftItem, ProposalResult, ProposalStatus, SignerSession } from "./session.js";
 import { SimulationRevert, type ReadCall } from "./simulate.js";
@@ -14,6 +14,18 @@ export class ProviderError extends Error {
   ) {
     super(message);
   }
+}
+
+/**
+ * What a dApp may see of an error: viem's messages include the request URL (and so a custom RPC's API key), so only
+ * the RPC's own code, message and revert data are kept.
+ */
+function toProviderError(error: unknown): ProviderError {
+  if (error instanceof ProviderError) return error;
+  if (!(error instanceof BaseError)) return new ProviderError(-32603, (error as Error).message);
+  const coded = error.walk((cause) => typeof (cause as { code?: unknown }).code === "number") as { code: number } | null;
+  const withData = error.walk((cause) => isHex((cause as { data?: unknown }).data)) as { data: Hex } | null;
+  return new ProviderError(coded?.code ?? -32603, error.details || error.shortMessage, withData?.data);
 }
 
 /** JSON-RPC code for a reverted call. */
@@ -124,6 +136,14 @@ export class DappProvider {
   }
 
   async request(origin: string, method: string, params: unknown = []): Promise<unknown> {
+    try {
+      return await this.handle(origin, method, params);
+    } catch (error) {
+      throw toProviderError(error);
+    }
+  }
+
+  private async handle(origin: string, method: string, params: unknown): Promise<unknown> {
     const session = this.host.session();
     if (!session) throw new ProviderError(DISCONNECTED, "Cicada is locked");
     const args = Array.isArray(params) ? params : [];
@@ -225,6 +245,13 @@ export class DappProvider {
 
   /** Proposes or queues a request, as the user chooses; returns the hash the dApp gets back. */
   private async propose(session: SignerSession, request: Omit<DappRequest, "id">): Promise<{ hash: Hex; queued?: boolean }> {
+    for (const call of request.calls) {
+      try {
+        quantity(call.value);
+      } catch {
+        throw new ProviderError(INVALID_PARAMS, "value must be a whole number of wei, decimal or 0x hex");
+      }
+    }
     if (this.reviewing) throw new ProviderError(RESOURCE_UNAVAILABLE, "Another request is waiting for review");
     this.reviewing = true;
     try {

@@ -180,6 +180,8 @@ function Shell({
 }) {
   const data = useSignerData();
   const [page, setPage] = useState<Page>(() => (window.location.hash.match(/page=(\w+)/)?.[1] as Page | undefined) ?? "overview");
+  // Bumped on every Safe switch so an open review is discarded instead of acting on the newly selected Safe.
+  const [switches, setSwitches] = useState(0);
   const { status, queue, refresh } = data;
   const waiting = queue.filter((item) => item.verdict.action !== "none").length;
   const [dappRequest, setDappRequest] = useState<DappRequest | null>(null);
@@ -230,6 +232,7 @@ function Shell({
             status={status}
             onAdd={onChangeSafe}
             onSwitched={() => {
+              setSwitches((count) => count + 1);
               onProfileChanged?.();
               void data.refresh();
             }}
@@ -309,7 +312,7 @@ function Shell({
         </div>
       </aside>
 
-      <main className={page === "browse" ? "content full" : "content"}>
+      <main key={switches} className={page === "browse" ? "content full" : "content"}>
         <SoleSignerContext.Provider value={status?.threshold === 1}>
           {data.error && <div className="note critical banner-top">Can't reach the signer: {data.error}</div>}
           {status?.queueError && <div className="note warning banner-top">Transaction Service unavailable: pending transactions may be missing.</div>}

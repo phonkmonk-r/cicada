@@ -773,13 +773,15 @@ export class SignerSession {
         return { ...result, proposed: true };
       }
       const signed = this.logSigned(owner, tx.nonce, hash, "confirm");
+      let signature: Hex;
       try {
-        const signature = await owner.account.signTypedData(safeTxTypedData(state.chainId, state.safe, tx));
-        await this.options.txService.propose(state.safe, tx, owner.account.address, signature);
+        signature = await owner.account.signTypedData(safeTxTypedData(state.chainId, state.safe, tx));
       } catch (error) {
         this.unlogSigned(signed);
         throw error;
       }
+      // A posted signature may have reached the service even if the reply fails, so the signing log keeps it.
+      await this.options.txService.propose(state.safe, tx, owner.account.address, signature);
       return { ...result, proposed: true };
     };
     if (preview) return run();
@@ -998,13 +1000,15 @@ export class SignerSession {
       const verdict = this.evaluate(state, tx, pending, owner);
       if (verdict.action !== "confirm") throw new Error(`cannot confirm: ${[...verdict.blockers, `allowed action is ${verdict.action}`].join("; ")}`);
       const signed = this.logSigned(owner, tx.tx.nonce, tx.safeTxHash, "confirm");
+      let signature: Hex;
       try {
-        const signature = await owner.account.signTypedData(safeTxTypedData(state.chainId, state.safe, tx.tx));
-        await this.options.txService.confirm(tx.safeTxHash, signature);
+        signature = await owner.account.signTypedData(safeTxTypedData(state.chainId, state.safe, tx.tx));
       } catch (error) {
         this.unlogSigned(signed);
         throw error;
       }
+      // A posted signature may have reached the service even if the reply fails, so the signing log keeps it.
+      await this.options.txService.confirm(tx.safeTxHash, signature);
       return { owner: owner.account.address };
     });
   }
@@ -1109,13 +1113,15 @@ export class SignerSession {
     const accountNonce = await publicClient.getTransactionCount({ address: from, blockTag: "pending" });
     const request = { to: state.safe, data, value: refundCover, gas: gasLimit, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas };
     const signed = this.logSigned(owner, nonce, record.safeTxHash, "execute");
-    let transactionHash: Hex;
+    let raw: Hex;
     try {
-      transactionHash = await wallet.sendTransaction({ ...request, nonce: accountNonce, chain });
+      raw = await wallet.signTransaction({ ...request, nonce: accountNonce, chain });
     } catch (error) {
       this.unlogSigned(signed);
       throw error;
     }
+    // Once signed the transaction may reach the RPC even if the reply fails, so the signing log keeps it.
+    const transactionHash = await wallet.sendRawTransaction({ serializedTransaction: raw });
     Object.assign(record, { transactionHash, sentAt: new Date().toISOString(), status: "pending" });
     step("send", { status: "done", detail: undefined, transactionHash });
     step("include", { status: "active", detail: "waiting for a block" });

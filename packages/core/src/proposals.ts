@@ -49,7 +49,8 @@ function positiveAmount(value: string): bigint {
   return amount;
 }
 
-function quantity(value: string | undefined): bigint {
+/** A dApp call's ETH value, decimal or 0x hex, in wei; empty means zero. Throws if it is not a whole number. */
+export function quantity(value: string | undefined): bigint {
   if (value === undefined || value === "" || value === "0x") return 0n;
   if (!/^(0x[0-9a-fA-F]+|\d+)$/.test(value)) throw new Error("value is not a number");
   return BigInt(value);
