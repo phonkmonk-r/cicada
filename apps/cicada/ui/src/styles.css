@@ -248,38 +248,305 @@ textarea {
   gap: var(--space-24);
 }
 
-/* ---------- Welcome (first launch) ---------- */
+/* ---------- Intro (first launch) ---------- */
 
-.welcome {
-  min-height: 100%;
-  max-width: 880px;
-  margin: 0 auto;
-  padding: var(--space-56) var(--space-24) var(--space-48);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-32);
+/*
+ * The logo arrives in the middle of a softly blurred field of color, then rises to the top and stays; each page's
+ * lines follow one after another. Pages leave in the direction of travel and the next one enters from the other side.
+ */
+.intro {
+  --intro-leave: 220ms;
+  --intro-delay: 0ms;
+  /* From the logo's resting place (top padding + half its size) to the middle of the window. */
+  --intro-rise: calc(50vh - 116px);
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  padding: 72px var(--space-24) var(--space-40);
+  background: var(--bg);
 }
 
-.welcome-hero {
+.intro.opening {
+  --intro-delay: 1500ms;
+}
+
+.intro-backdrop {
+  position: absolute;
+  inset: -25%;
+  z-index: -1;
+  filter: blur(90px) saturate(140%);
+  animation: intro-backdrop 1.8s var(--ease-out) both;
+}
+
+.intro-backdrop span {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.32;
+}
+
+.intro-backdrop span:nth-child(1) {
+  width: 55vmax;
+  height: 55vmax;
+  left: 12%;
+  top: 18%;
+  background: var(--accent);
+}
+
+.intro-backdrop span:nth-child(2) {
+  width: 42vmax;
+  height: 42vmax;
+  right: 14%;
+  top: 10%;
+  background: #e8b445;
+  opacity: 0.26;
+}
+
+.intro-backdrop span:nth-child(3) {
+  width: 48vmax;
+  height: 48vmax;
+  left: 38%;
+  bottom: 6%;
+  background: #2d8f9a;
+  opacity: 0.2;
+}
+
+@media (prefers-color-scheme: dark) {
+  .intro-backdrop span {
+    opacity: 0.18;
+  }
+
+  .intro-backdrop span:nth-child(n + 2) {
+    opacity: 0.12;
+  }
+}
+
+.intro-logo {
+  display: flex;
+  animation:
+    intro-logo-in 800ms var(--ease-out) both,
+    intro-logo-rise 900ms cubic-bezier(0.32, 0.72, 0, 1) 950ms both;
+}
+
+.intro-logo svg {
+  filter: drop-shadow(0 14px 30px rgb(15 64 58 / 0.28));
+}
+
+.intro-skip {
+  position: absolute;
+  top: var(--space-20);
+  right: var(--space-24);
+  color: var(--muted);
+  animation: intro-fade 600ms ease 1900ms both;
+}
+
+.intro-stage {
+  align-self: center;
+  width: min(560px, 100%);
+  min-height: 240px;
+  display: grid;
+  align-items: center;
+  text-align: center;
+}
+
+.intro-page > * {
+  animation: intro-line-in 700ms var(--ease-out) both;
+  animation-delay: calc(var(--intro-delay) + var(--line, 0) * 110ms);
+}
+
+.intro-page.back > * {
+  animation-name: intro-line-in-back;
+}
+
+.intro-page.leaving > * {
+  animation: intro-line-out var(--intro-leave) ease-in both;
+}
+
+.intro-page.leaving.back > * {
+  animation-name: intro-line-out-back;
+}
+
+.intro-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto var(--space-20);
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent-soft) 80%, transparent);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.intro-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.intro-page h1 {
+  font-size: 30px;
+  font-weight: 650;
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  margin-bottom: var(--space-12);
+}
+
+.intro-page.hero h1 {
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  margin-bottom: var(--space-16);
+}
+
+.intro-page p {
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 460px;
+  margin: 0 auto var(--space-4);
+  text-wrap: balance;
+}
+
+.intro-page.hero p:first-of-type {
+  font-size: var(--text-xl);
+  color: var(--text);
+}
+
+.intro-controls {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
-  gap: var(--space-12);
+  gap: var(--space-16);
+  animation: intro-fade 600ms ease calc(var(--intro-delay) + 500ms) both;
 }
 
-.welcome-hero h1 {
-  font-size: var(--text-display);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-top: var(--space-6);
+.intro-dots {
+  display: flex;
+  gap: var(--space-8);
 }
 
-.welcome-tagline {
-  font-size: var(--text-lg);
-  color: var(--muted);
-  max-width: 520px;
-  margin-bottom: var(--space-8);
+.intro-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 22%, transparent);
+  transition: width var(--dur-med) var(--ease-out), background var(--dur-med);
+}
+
+.intro-dots button:hover:not(.active) {
+  background: var(--muted);
+}
+
+.intro-dots button.active {
+  width: 24px;
+  background: var(--accent);
+}
+
+.intro-footnote {
+  margin-top: var(--space-4);
+}
+
+.desktop-mac .intro {
+  -webkit-app-region: drag;
+}
+
+@keyframes intro-backdrop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes intro-logo-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--intro-rise)) scale(0.82);
+    filter: blur(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(var(--intro-rise)) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes intro-logo-rise {
+  from {
+    transform: translateY(var(--intro-rise));
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes intro-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(8px);
+  }
+}
+
+@keyframes intro-line-in-back {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+    filter: blur(8px);
+  }
+}
+
+@keyframes intro-line-out {
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+    filter: blur(6px);
+  }
+}
+
+@keyframes intro-line-out-back {
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(6px);
+  }
+}
+
+@keyframes intro-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* No travel or blur: the logo sits at the top and pages cross-fade. */
+@media (prefers-reduced-motion: reduce) {
+  .intro-logo,
+  .intro-backdrop {
+    animation: none;
+  }
+
+  .intro-page > *,
+  .intro-page.back > *,
+  .intro-page.leaving > *,
+  .intro-page.leaving.back > * {
+    animation-name: intro-fade;
+    animation-delay: 0ms;
+  }
+
+  .intro-page.leaving > * {
+    animation-direction: reverse;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .intro-backdrop {
+    display: none;
+  }
 }
 
 button.large {
@@ -287,56 +554,6 @@ button.large {
   padding: 0 var(--space-32);
   font-size: var(--text-lg);
   border-radius: var(--radius-md);
-}
-
-.welcome-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-16);
-}
-
-.welcome-card {
-  margin: 0;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-10);
-}
-
-.welcome-card h2 {
-  font-size: var(--text-lg);
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-
-.welcome-card p {
-  font-size: var(--text-md);
-}
-
-.welcome-note {
-  display: flex;
-  gap: var(--space-16);
-  align-items: flex-start;
-  padding: var(--space-20) var(--space-20);
-  border-radius: var(--radius);
-  background: var(--accent-soft);
-  color: var(--text);
-}
-
-.welcome-note svg {
-  flex: none;
-  margin-top: var(--space-2);
-  color: var(--accent);
-}
-
-.welcome-note strong {
-  font-weight: 650;
-}
-
-@media (max-width: 720px) {
-  .welcome-cards {
-    grid-template-columns: 1fr;
-  }
 }
 
 .auth-brand {

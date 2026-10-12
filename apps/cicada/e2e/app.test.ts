@@ -100,6 +100,15 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
 
   it("adds a seed profile and joins the Safe from its address alone", async () => {
     await page.getByRole("heading", { name: "Cicada" }).waitFor();
+    // The intro shows one idea per page: Continue, the arrow keys and the dots move through it.
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("heading", { name: "One key, one signature" }).waitFor();
+    await page.keyboard.press("ArrowRight");
+    await page.getByRole("heading", { name: "Next keys, committed ahead" }).waitFor();
+    await page.keyboard.press("ArrowLeft");
+    await page.getByRole("heading", { name: "One key, one signature" }).waitFor();
+    await page.getByRole("tab", { name: "Addresses only" }).click();
+    await page.getByRole("heading", { name: "Addresses only" }).waitFor();
     await page.getByRole("button", { name: "Get started" }).click();
     await page.getByRole("heading", { name: "Add a profile" }).waitFor();
     await page.getByLabel("Profile name").fill("Signer 1");

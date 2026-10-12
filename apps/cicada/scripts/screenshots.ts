@@ -85,9 +85,11 @@ const shot = async (name: string) => {
 };
 const nav = (label: string) => page.locator(".nav").getByRole("button", { name: label }).click();
 
-await page.getByRole("button", { name: "Get started" }).waitFor();
+await page.getByRole("button", { name: "Continue" }).waitFor();
+// The intro's opening (logo, then the first page's lines) takes about 2.5 s.
+await page.waitForTimeout(2600);
 await shot("welcome");
-await page.getByRole("button", { name: "Get started" }).click();
+await page.getByRole("button", { name: "Skip" }).click();
 await page.getByLabel("Profile name").fill("Alice");
 await page.getByLabel(/Seed phrase/).fill(SIGNER_SEEDS[0]!);
 await page.getByLabel(/Safe address/).fill(chain.safe);
