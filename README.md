@@ -62,7 +62,7 @@ Needs Node 22 and Foundry.
 ```sh
 npm install
 (cd contracts && forge build)
-npm run desktop -w @rotating-msig/cicada
+npm run desktop -w @cicada/app
 ```
 
 Add a profile from a seed phrase or a Ledger, then join a Safe by its address or create a new one.
@@ -70,8 +70,8 @@ Add a profile from a seed phrase or a Ledger, then join a Safe by its address or
 ```sh
 (cd contracts && forge test)                 # contract
 npm run typecheck && npm test                # TypeScript, against real contracts on anvil
-npm run test:app -w @rotating-msig/cicada    # the desktop app, driven by Playwright
-npm run screenshots -w @rotating-msig/cicada # regenerates screenshots/
+npm run test:app -w @cicada/app    # the desktop app, driven by Playwright
+npm run screenshots -w @cicada/app # regenerates screenshots/
 ```
 
 ## Layout

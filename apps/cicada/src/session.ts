@@ -39,11 +39,11 @@ import {
   type TreeFile,
   type TxService,
   type Verdict,
-} from "@rotating-msig/core";
+} from "@cicada/core";
 import { KeyChecker, type UsedKey } from "./keycheck.js";
 import { readAfter, simulateCalls, type ReadCall, type Simulation } from "./simulate.js";
 import { memoryStore, type SessionStore } from "./store.js";
-import { generateTree, OPERATOR_ACCOUNT, resolveCurrentOwner, type AddressSource, type CurrentOwner } from "@rotating-msig/keys";
+import { generateTree, OPERATOR_ACCOUNT, resolveCurrentOwner, type AddressSource, type CurrentOwner } from "@cicada/keys";
 import {
   BaseError,
   createWalletClient,

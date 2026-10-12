@@ -3,8 +3,8 @@ import { after, before, describe, it } from "node:test";
 import { createWalletClient, http, numberToHex, parseEther, type Address } from "viem";
 import { foundry } from "viem/chains";
 
-import { packageMessage, verifySignedPackages, safeKeyPath, decodeInvite, decodePackage, encodeInvite, encodePackage, readSafeState, verifyPackages, type SafeDeployments, type SlotPackage } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { packageMessage, verifySignedPackages, safeKeyPath, decodeInvite, decodePackage, encodeInvite, encodePackage, readSafeState, verifyPackages, type SafeDeployments, type SlotPackage } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { joinSafe } from "../src/join.js";
 import { KeyChecker } from "../src/keycheck.js";

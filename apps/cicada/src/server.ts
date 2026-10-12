@@ -171,7 +171,7 @@ export async function serve(session: SignerSession, options: ServeOptions): Prom
   }
 
   function serveStatic(pathname: string, res: ServerResponse) {
-    if (!options.uiDir) return send(res, 404, { error: "UI not built; run `npm run build -w @rotating-msig/cicada`" });
+    if (!options.uiDir) return send(res, 404, { error: "UI not built; run `npm run build -w @cicada/app`" });
     const relative = normalize(pathname === "/" ? "/index.html" : pathname).replace(/^(\.\.[/\\])+/, "");
     let file = join(options.uiDir, relative);
     if (!file.startsWith(options.uiDir) || !existsSync(file) || !statSync(file).isFile()) file = join(options.uiDir, "index.html");

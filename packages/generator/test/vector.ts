@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 
-import { PATH_TEMPLATE, seedSource } from "@rotating-msig/keys";
-import { createTreeFile, leafHash, loadTreeFile, proofFor, slotConfig, stageEntries, type TreeMeta } from "@rotating-msig/core";
+import { PATH_TEMPLATE, seedSource } from "@cicada/keys";
+import { createTreeFile, leafHash, loadTreeFile, proofFor, slotConfig, stageEntries, type TreeMeta } from "@cicada/core";
 
 /** Public test mnemonic. Never use it for real funds. */
 export const VECTOR_MNEMONIC = "test test test test test test test test test test test junk";

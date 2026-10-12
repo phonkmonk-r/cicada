@@ -19,8 +19,8 @@ import {
 import { mnemonicToAccount, type HDAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 
-import { createTreeFile, installTx, loadTreeFile, plainSafeTx, safeAbi, safeKeyPath, safeTxHash, slotConfig, stageEntries, type SafeTx, type TreeFile } from "@rotating-msig/core";
-import { generateTree, OPERATOR_ACCOUNT, seedSource } from "@rotating-msig/keys";
+import { createTreeFile, installTx, loadTreeFile, plainSafeTx, safeAbi, safeKeyPath, safeTxHash, slotConfig, stageEntries, type SafeTx, type TreeFile } from "@cicada/core";
+import { generateTree, OPERATOR_ACCOUNT, seedSource } from "@cicada/keys";
 
 const OUT = new URL("../../../contracts/out/", import.meta.url);
 const ANVIL_MNEMONIC = "test test test test test test test test test test test junk";

@@ -1,4 +1,4 @@
-import { quantity, type DappCall } from "@rotating-msig/core";
+import { quantity, type DappCall } from "@cicada/core";
 import { BaseError, getAddress, isAddress, isHex, keccak256, numberToHex, stringToHex, type Hex } from "viem";
 
 import type { DraftItem, ProposalResult, ProposalStatus, SignerSession } from "./session.js";

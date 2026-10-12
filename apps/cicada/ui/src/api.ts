@@ -1,4 +1,4 @@
-import type { DappCall, ProposalInput } from "@rotating-msig/core";
+import type { DappCall, ProposalInput } from "@cicada/core";
 
 import type { DappRequest } from "../../src/dapp.js";
 import type { DraftItem, DraftView, Execution, Exposure, ProposalResult, QueueItem, Refill, SignerView, StatusView, TokenInfo } from "../../src/session.js";

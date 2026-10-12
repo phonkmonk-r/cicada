@@ -1,4 +1,4 @@
-import type { MetaTx } from "@rotating-msig/core";
+import type { MetaTx } from "@cicada/core";
 import { erc20Abi, getAddress, isAddressEqual, numberToHex, toEventSelector, type Address, type Hex, type PublicClient } from "viem";
 
 const TRANSFER = toEventSelector("Transfer(address,address,uint256)");

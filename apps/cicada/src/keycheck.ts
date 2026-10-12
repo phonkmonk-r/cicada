@@ -1,4 +1,4 @@
-import { rotationGuardAbi } from "@rotating-msig/core";
+import { rotationGuardAbi } from "@cicada/core";
 import { decodeEventLog, getAddress, isAddressEqual, toEventSelector, type Address, type Hex, type PublicClient } from "viem";
 
 const OWNER_STAGED = toEventSelector("OwnerStaged(address,uint256,uint32,address)");

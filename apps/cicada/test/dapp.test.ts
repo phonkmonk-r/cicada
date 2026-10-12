@@ -3,8 +3,8 @@ import { after, before, describe, it } from "node:test";
 import { numberToHex, parseEther, type Address, type Hex } from "viem";
 import { foundry } from "viem/chains";
 
-import { TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { TxService } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { DappProvider, ProviderError, USER_REJECTED, type DappRequest } from "../src/dapp.js";
 import { SignerSession } from "../src/session.js";

@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 import { parseEther } from "viem";
 import { foundry } from "viem/chains";
 
-import { plainSafeTx, TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { plainSafeTx, TxService } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { serve } from "../src/server.js";
 import { SignerSession } from "../src/session.js";

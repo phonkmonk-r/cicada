@@ -3,8 +3,8 @@ import { after, before, describe, it } from "node:test";
 import type { Address, Hex } from "viem";
 import { foundry } from "viem/chains";
 
-import { plainSafeTx, TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { plainSafeTx, TxService } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { SignerSession, type Execution } from "../src/session.js";
 import { memoryStore } from "../src/store.js";

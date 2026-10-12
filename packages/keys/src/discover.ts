@@ -1,4 +1,4 @@
-import { BRANCH_PATH_TEMPLATE, createTreeFile, treeKeyPath, type SafeState, type SlotState, type TreeFile, type TreeMeta } from "@rotating-msig/core";
+import { BRANCH_PATH_TEMPLATE, createTreeFile, treeKeyPath, type SafeState, type SlotState, type TreeFile, type TreeMeta } from "@cicada/core";
 import { isAddressEqual, type Address } from "viem";
 
 import type { AddressSource } from "./source.js";

@@ -1,4 +1,4 @@
-# @rotating-msig/core
+# @cicada/core
 
 Shared logic for the rotating Safe multisig, with no keys and no Node-only code. It is everything that has to agree with the `RotationGuard` contract or with Safe, written once so the desktop app, the key package and the tree generator cannot drift apart.
 
@@ -14,12 +14,12 @@ Shared logic for the rotating Safe multisig, with no keys and no Node-only code.
 
 ## Why it is needed
 
-The guard only accepts transactions shaped exactly right (signature length, gas fields, leaf encoding), and a mistake publishes signatures without rotating anyone. Keeping that knowledge here means Cicada (`apps/cicada`), `@rotating-msig/keys` and `@rotating-msig/generator` all build and check transactions the same way, and the tests catch drift from the contract.
+The guard only accepts transactions shaped exactly right (signature length, gas fields, leaf encoding), and a mistake publishes signatures without rotating anyone. Keeping that knowledge here means Cicada (`apps/cicada`), `@cicada/keys` and `@cicada/generator` all build and check transactions the same way, and the tests catch drift from the contract.
 
 ## Development
 
 ```sh
-npm run build -w @rotating-msig/core
-npm test -w @rotating-msig/core   # needs contracts/out from `forge build` and anvil
-npm run abi -w @rotating-msig/core   # after a contract change; test/abi.test.ts fails on drift
+npm run build -w @cicada/core
+npm test -w @cicada/core   # needs contracts/out from `forge build` and anvil
+npm run abi -w @cicada/core   # after a contract change; test/abi.test.ts fails on drift
 ```

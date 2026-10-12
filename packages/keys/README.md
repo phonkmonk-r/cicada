@@ -1,4 +1,4 @@
-# @rotating-msig/keys
+# @cicada/keys
 
 Key handling for rotation trees, for Node only. It turns a seed phrase or a Ledger into the addresses of a signer's key list and into the account that signs with the slot's current key. Private keys and the mnemonic never leave it.
 
@@ -12,11 +12,11 @@ Key handling for rotation trees, for Node only. It turns a seed phrase or a Ledg
 
 ## Why it is needed
 
-Every owner key is used once and then replaced, so a signer needs the right key out of up to 10,000 for every signature, and it must come from the same derivation the tree was built with. Keeping this in one package means Cicada (`apps/cicada`) and the tree generator (`@rotating-msig/generator`) derive identical addresses, and `@rotating-msig/core` stays free of secrets and Node-only code.
+Every owner key is used once and then replaced, so a signer needs the right key out of up to 10,000 for every signature, and it must come from the same derivation the tree was built with. Keeping this in one package means Cicada (`apps/cicada`) and the tree generator (`@cicada/generator`) derive identical addresses, and `@cicada/core` stays free of secrets and Node-only code.
 
 ## Development
 
 ```sh
-npm run build -w @rotating-msig/keys
-npm test -w @rotating-msig/keys
+npm run build -w @cicada/keys
+npm test -w @cicada/keys
 ```

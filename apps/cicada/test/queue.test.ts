@@ -5,8 +5,8 @@ import { createPublicClient, createWalletClient, custom, decodeFunctionResult, e
 import { foundry } from "viem/chains";
 import { BrowserProvider, Contract } from "ethers";
 
-import { TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { TxService } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { DappProvider, type DappRequest } from "../src/dapp.js";
 import { SignerSession } from "../src/session.js";

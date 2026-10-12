@@ -3,8 +3,8 @@ import { after, before, describe, it } from "node:test";
 import { parseEther } from "viem";
 import { foundry } from "viem/chains";
 
-import { encodePackage, readSafeState, TxService, type ProposalInput } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { encodePackage, readSafeState, TxService, type ProposalInput } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { joinSafe } from "../src/join.js";
 import { KeyChecker } from "../src/keycheck.js";

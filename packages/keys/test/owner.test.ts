@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { Address } from "viem";
 
-import { createTreeFile, type SafeState, type SlotState, type TreeFile } from "@rotating-msig/core";
+import { createTreeFile, type SafeState, type SlotState, type TreeFile } from "@cicada/core";
 
 import { resolveCurrentOwner } from "../src/owner.js";
 import { seedSource } from "../src/seed.js";

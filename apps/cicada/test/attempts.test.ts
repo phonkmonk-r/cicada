@@ -6,8 +6,8 @@ import { after, before, describe, it } from "node:test";
 import type { Address, Hex } from "viem";
 import { foundry } from "viem/chains";
 
-import { plainSafeTx, TxService } from "@rotating-msig/core";
-import { seedSource, type AddressSource } from "@rotating-msig/keys";
+import { plainSafeTx, TxService } from "@cicada/core";
+import { seedSource, type AddressSource } from "@cicada/keys";
 
 import { SignerSession, type Execution } from "../src/session.js";
 import { fileStore, memoryStore, type SessionStore } from "../src/store.js";

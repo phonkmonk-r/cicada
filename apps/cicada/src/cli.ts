@@ -3,8 +3,8 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
-import { loadTreeFile, type TreeFile } from "@rotating-msig/core";
-import { openLedgerSource, readSecret, seedSource, type AddressSource } from "@rotating-msig/keys";
+import { loadTreeFile, type TreeFile } from "@cicada/core";
+import { openLedgerSource, readSecret, seedSource, type AddressSource } from "@cicada/keys";
 import { formatEther, type Chain } from "viem";
 
 import { chainFor, createSession, DEFAULT_EXECUTION_RPC } from "./create.js";

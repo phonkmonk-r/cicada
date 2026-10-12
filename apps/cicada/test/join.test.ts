@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { foundry } from "viem/chains";
 
-import { plainSafeTx, readSafeState, TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { plainSafeTx, readSafeState, TxService } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { JoinError, joinSafe, type JoinProgress } from "../src/join.js";
 import { SignerSession } from "../src/session.js";

@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { getAddress, hashMessage, hexToSignature, recoverMessageAddress, keccak256, concatHex, parseTransaction, recoverTransactionAddress, recoverTypedDataAddress, type Hex } from "viem";
 import { privateKeyToAccount, sign } from "viem/accounts";
 
-import { plainSafeTx, safeTxTypedData } from "@rotating-msig/core";
+import { plainSafeTx, safeTxTypedData } from "@cicada/core";
 
 import { ledgerSource, type LedgerEth } from "../src/ledger.js";
 import { seedSource } from "../src/seed.js";

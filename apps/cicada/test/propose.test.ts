@@ -3,8 +3,8 @@ import { after, before, describe, it } from "node:test";
 import { parseEther, type Address } from "viem";
 import { foundry } from "viem/chains";
 
-import { readSafeState, TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { readSafeState, TxService } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { SignerSession } from "../src/session.js";
 import { hasAnvil, hasArtifacts, SIGNER_SEEDS, startChain, startFakeTxService, type Chain, type FakeTxService } from "./fixture.js";

@@ -3,8 +3,8 @@ import { after, before, describe, it } from "node:test";
 import { parseEther, type Address } from "viem";
 import { foundry } from "viem/chains";
 
-import { BRANCH_PATH_TEMPLATE, readSafeState, safeKeyPath, TxService, type TreeFile } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { BRANCH_PATH_TEMPLATE, readSafeState, safeKeyPath, TxService, type TreeFile } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { joinSafe } from "../src/join.js";
 import { SignerSession } from "../src/session.js";

@@ -12,7 +12,7 @@ The desktop app is called Cicada. The command-line version keeps the `rotation-s
 # From the repository root
 npm install
 npm run build
-npm run desktop -w @rotating-msig/cicada
+npm run desktop -w @cicada/app
 ```
 
 On first launch, enter your seed phrase, a password and, to join an existing Safe, its address. That is all. The seed is encrypted (scrypt and AES-256-GCM) into the app's data folder, and the app then works out the rest itself:
@@ -97,8 +97,8 @@ Your seed's first account is your gas account: it pays for every execution, so y
 ## Local demo
 
 ```sh
-npm run build -w @rotating-msig/cicada
-npm run demo -w @rotating-msig/cicada
+npm run build -w @cicada/app
+npm run demo -w @cicada/app
 ```
 
 Starts anvil with a guarded 2-of-3 Safe, an in-memory Transaction Service with one pending transfer, and three signers (one per test seed), and prints a link for each. Confirm in signer 1, execute in signer 2, and watch both rotate.

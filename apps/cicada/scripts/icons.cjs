@@ -1,5 +1,5 @@
 // Renders desktop/assets/icon.svg into icon.png (1024 px, transparent outside the rounded square) and, on macOS,
-// icon.icns. Run with Electron, which brings the SVG renderer: `npm run icons -w @rotating-msig/cicada`.
+// icon.icns. Run with Electron, which brings the SVG renderer: `npm run icons -w @cicada/app`.
 const { app, BrowserWindow } = require("electron");
 const { execFileSync } = require("node:child_process");
 const { mkdtempSync, readFileSync, rmSync, writeFileSync } = require("node:fs");

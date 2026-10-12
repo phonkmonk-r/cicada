@@ -1,5 +1,5 @@
 {
-  "name": "@rotating-msig/generator",
+  "name": "@cicada/generator",
   "version": "0.1.0",
   "private": true,
   "description": "Offline generator for RotationGuard signer trees: derives fresh owner addresses and builds the Merkle tree, root and proofs.",
@@ -18,8 +18,8 @@
     "vectors": "tsx --conditions=source scripts/vectors.ts"
   },
   "dependencies": {
-    "@rotating-msig/core": "0.1.0",
-    "@rotating-msig/keys": "0.1.0",
+    "@cicada/core": "0.1.0",
+    "@cicada/keys": "0.1.0",
     "viem": "2.56.8"
   },
   "devDependencies": {

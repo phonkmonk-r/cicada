@@ -1,4 +1,4 @@
-import { SEPOLIA_CHAIN_ID } from "@rotating-msig/core";
+import { SEPOLIA_CHAIN_ID } from "@cicada/core";
 import type { Chain } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 

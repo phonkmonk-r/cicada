@@ -25,8 +25,8 @@ import {
   type SafeInvite,
   type SlotPackage,
   type TreeFile,
-} from "@rotating-msig/core";
-import { generateTree, OPERATOR_ACCOUNT, type AddressSource } from "@rotating-msig/keys";
+} from "@cicada/core";
+import { generateTree, OPERATOR_ACCOUNT, type AddressSource } from "@cicada/keys";
 import { createWalletClient, custom, isAddressEqual, type Address, type Chain, type Hex, type PublicClient } from "viem";
 
 import { keyCheckerFor } from "./create.js";

@@ -1,6 +1,6 @@
 import { isAddressEqual, type Address, type LocalAccount } from "viem";
 
-import { treeKeyPath, type SafeState, type SlotState, type TreeFile } from "@rotating-msig/core";
+import { treeKeyPath, type SafeState, type SlotState, type TreeFile } from "@cicada/core";
 
 import type { AddressSource } from "./source.js";
 

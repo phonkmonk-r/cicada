@@ -13,8 +13,8 @@ import { parseEther, type Address } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 
-import { DEPLOYMENTS, plainSafeTx, readSafeState, TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { DEPLOYMENTS, plainSafeTx, readSafeState, TxService } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { SignerSession } from "../src/session.js";
 import { hasAnvil, hasArtifacts, SIGNER_SEEDS, startChain, startFakeTxService, type Chain, type FakeTxService } from "../test/fixture.js";

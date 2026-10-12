@@ -120,7 +120,7 @@ jobs:
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Electron end-to-end tests
-        run: xvfb-run --auto-servernum npm run test:app -w @rotating-msig/cicada
+        run: xvfb-run --auto-servernum npm run test:app -w @cicada/app
         env:
           E2E_SCREENSHOTS: ${{ runner.temp }}/screenshots
 

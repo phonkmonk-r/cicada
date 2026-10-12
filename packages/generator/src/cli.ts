@@ -19,8 +19,8 @@ import {
   treeKeyPath,
   validateMeta,
   type TreeMeta,
-} from "@rotating-msig/core";
-import { openLedgerSource, readSecret, seedSource, type AddressSource } from "@rotating-msig/keys";
+} from "@cicada/core";
+import { openLedgerSource, readSecret, seedSource, type AddressSource } from "@cicada/keys";
 
 
 /** Account indexes below this are where wallets put everyday accounts, whose keys may already be exposed. */

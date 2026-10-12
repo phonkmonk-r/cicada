@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import { getAddress } from "viem";
 
-import { createTreeFile, SEPOLIA_CHAIN_ID } from "@rotating-msig/core";
+import { createTreeFile, SEPOLIA_CHAIN_ID } from "@cicada/core";
 
 import { DEFAULT_EXECUTION_RPC, DEFAULT_PORT, parseConfig } from "../src/cli.js";
 

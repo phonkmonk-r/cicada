@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 
 import { run, sampleIndexes, type Io } from "../src/cli.js";
-import { seedSource } from "@rotating-msig/keys";
-import { defaultBase, type TreeFile, RANGE_PATH_TEMPLATE, safeKeyPath, BRANCH_PATH_TEMPLATE } from "@rotating-msig/core";
+import { seedSource } from "@cicada/keys";
+import { defaultBase, type TreeFile, RANGE_PATH_TEMPLATE, safeKeyPath, BRANCH_PATH_TEMPLATE } from "@cicada/core";
 
 const TEST_MNEMONIC = "test test test test test test test test test test test junk";
 const SAFE = "0x1234567890123456789012345678901234567890";

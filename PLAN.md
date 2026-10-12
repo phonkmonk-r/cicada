@@ -134,7 +134,7 @@ Done unless marked. Details of how each works are in `ARCHITECT.md`.
 - **4j-20. Migrate an existing Safe**: open, v1 must (section 2).
 - **4j-21. dApp browser compatibility and tabs**: extensible injected wallet (Uniswap), per-site connect (Curve), tabs and popups, saved pages. Checked against Uniswap, Aave, CoW Swap, Lido, 1inch and Curve.
 - **4j-22. Safes without ETH could not execute**: found on Sepolia when every execution reverted with GS011; fixed by attaching the refund bound as value. Reverted executions now show why.
-- **4j-23. Repository layout** (2026-10-12): Foundry in `contracts/`, generator in `packages/generator`, desktop app in `apps/cicada` (`@rotating-msig/cicada`; its data folder is unchanged), legacy Safe App removed.
+- **4j-23. Repository layout** (2026-10-12): Foundry in `contracts/`, generator in `packages/generator`, desktop app in `apps/cicada` (`@cicada/app`; its data folder is unchanged), legacy Safe App removed.
 - **4j-24. Reject a transaction** (2026-10-12): Reject on the next transaction proposes a force-rotate of every exposed slot plus the rejecter's own at the same nonce; Safe{Wallet}'s 0/0 rejection is refused by the guard. Later transactions no longer block it, and a recovery's own signers count as covered. Tested in rules, on anvil (including a lost race), over the HTTP API, in the desktop e2e and in Foundry.
 
 ## 7. Key derivation and collisions

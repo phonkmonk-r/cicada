@@ -1,6 +1,6 @@
 /**
  * Captures the screenshots used in the README from the real desktop app against a local chain:
- * `npm run screenshots -w @rotating-msig/cicada [-- outDir]` (defaults to `../screenshots`). Needs anvil and `forge build`.
+ * `npm run screenshots -w @cicada/app [-- outDir]` (defaults to `../screenshots`). Needs anvil and `forge build`.
  * With `SCREENSHOT_PAUSE=<dir>` it stops at each state until `<dir>/next` exists, for screenshots taken by hand.
  * The captures are then framed as macOS windows by `frame.py` (python3 with Pillow).
  */
@@ -14,8 +14,8 @@ import { _electron as electron } from "playwright-core";
 import { parseEther, type Address } from "viem";
 import { foundry } from "viem/chains";
 
-import { DEPLOYMENTS, plainSafeTx, TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { DEPLOYMENTS, plainSafeTx, TxService } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { SignerSession } from "../src/session.js";
 import { SIGNER_SEEDS, startChain, startFakeTxService } from "../test/fixture.js";

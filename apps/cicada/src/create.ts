@@ -1,5 +1,5 @@
-import { DEPLOYMENTS, TxService, type TreeFile } from "@rotating-msig/core";
-import type { AddressSource } from "@rotating-msig/keys";
+import { DEPLOYMENTS, TxService, type TreeFile } from "@cicada/core";
+import type { AddressSource } from "@cicada/keys";
 import { createPublicClient, fallback, http, type Chain, type PublicClient } from "viem";
 
 import { readClient } from "./join.js";

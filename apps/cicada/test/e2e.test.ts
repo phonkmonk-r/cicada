@@ -4,8 +4,8 @@ import { after, before, describe, it } from "node:test";
 import { parseEther, type Address } from "viem";
 import { foundry } from "viem/chains";
 
-import { plainSafeTx, TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { plainSafeTx, TxService } from "@cicada/core";
+import { seedSource } from "@cicada/keys";
 
 import { serve, type SignerServer } from "../src/server.js";
 import { SignerSession } from "../src/session.js";

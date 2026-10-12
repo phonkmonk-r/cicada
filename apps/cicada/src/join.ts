@@ -8,8 +8,8 @@ import {
   safeKeyPath,
   MAX_KEY_GENERATIONS,
   type TreeFile,
-} from "@rotating-msig/core";
-import { discoverSlot, generateTree, type AddressSource, type KeyLayout } from "@rotating-msig/keys";
+} from "@cicada/core";
+import { discoverSlot, generateTree, type AddressSource, type KeyLayout } from "@cicada/keys";
 import { createPublicClient, fallback, getAddress, http, isAddress, isAddressEqual, type Address, type PublicClient } from "viem";
 
 import { chainFor, DEFAULT_RPCS } from "./networks.js";

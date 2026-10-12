@@ -15,8 +15,8 @@ import {
   type SafeInvite,
   type SlotPackage,
   type TreeFile,
-} from "@rotating-msig/core";
-import { openLedgerSource, OPERATOR_ACCOUNT, seedSource, type AddressSource } from "@rotating-msig/keys";
+} from "@cicada/core";
+import { openLedgerSource, OPERATOR_ACCOUNT, seedSource, type AddressSource } from "@cicada/keys";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { defineChain, isHex, type Hex } from "viem";
 import { foundry } from "viem/chains";
