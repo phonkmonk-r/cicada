@@ -10,6 +10,14 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "desktop": "npm run desktop -w @rotating-msig/cicada",
+    "demo": "npm run demo -w @rotating-msig/cicada",
+    "test:app": "npm run test:app -w @rotating-msig/cicada",
+    "tree": "npm run cli -w @rotating-msig/generator --",
+    "abi": "npm run abi -w @rotating-msig/core",
+    "contracts:build": "cd contracts && forge build",
+    "contracts:test": "cd contracts && forge test",
+    "test:all": "npm run contracts:build && npm test && npm run contracts:test"
   }
 }
