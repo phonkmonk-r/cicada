@@ -175,6 +175,7 @@ interface DesktopBridge {
   executions(): Promise<Result<Execution[]>>;
   speedUp(hash: string): Promise<Result<Execution>>;
   recover(preview: boolean): Promise<Result<ProposalResult & { slotIds: number[] }>>;
+  reject(hash: string, preview: boolean): Promise<Result<ProposalResult & { slotIds: number[] }>>;
   propose(input: ProposalInput, preview: boolean): Promise<Result<ProposalResult>>;
   token(address: string): Promise<Result<TokenInfo>>;
   refill(): Promise<Result<Refill | null>>;
@@ -280,6 +281,8 @@ export const api = {
   speedUp: (hash: string) => (bridge ? unwrap(bridge.speedUp(hash)) : http<Execution>("/api/speed-up", post(hash))),
   recover: (preview: boolean) =>
     bridge ? unwrap(bridge.recover(preview)) : http<ProposalResult & { slotIds: number[] }>("/api/recover", { method: "POST", body: JSON.stringify({ preview }) }),
+  reject: (hash: string, preview: boolean) =>
+    bridge ? unwrap(bridge.reject(hash, preview)) : http<ProposalResult & { slotIds: number[] }>("/api/reject", { method: "POST", body: JSON.stringify({ safeTxHash: hash, preview }) }),
   propose: (input: ProposalInput, preview: boolean) =>
     bridge ? unwrap(bridge.propose(input, preview)) : http<ProposalResult>("/api/propose", { method: "POST", body: JSON.stringify({ input, preview }) }),
   draft: () => (bridge ? unwrap(bridge.draft()) : http<DraftView>("/api/draft")),

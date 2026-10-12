@@ -142,6 +142,24 @@ describe("rotation signer end to end", { skip }, () => {
     assert.equal((await post(servers[0]!, "/api/confirm", "0x1234")).status, 400);
   });
 
+  it("rejects a confirmed transaction over the API with a force-rotate at its nonce", async () => {
+    const nonce = BigInt((await api(servers[0]!, "/api/status")).body.nonce as string);
+    const hash = service.propose(plainSafeTx({ to: RECIPIENT, value: 1n, data: "0x", operation: 0, nonce }));
+    assert.equal((await post(servers[0]!, "/api/confirm", hash)).status, 200);
+    const reject = (body: unknown) => api(servers[2]!, "/api/reject", { method: "POST", body: JSON.stringify(body) });
+    assert.equal((await reject({ safeTxHash: "0x1234" })).status, 400);
+    const preview = await reject({ safeTxHash: hash, preview: true });
+    assert.equal(preview.status, 200, JSON.stringify(preview.body));
+    assert.deepEqual(preview.body.slotIds, [0, 2]);
+    assert.equal(preview.body.proposed, false);
+    const proposed = await reject({ safeTxHash: hash });
+    assert.equal(proposed.body.proposed, true);
+    const executed = await executeAndWait(servers[1]!, proposed.body.safeTxHash as string);
+    assert.equal(executed.status, "success", JSON.stringify(executed));
+    assert.equal(BigInt((await api(servers[0]!, "/api/status")).body.nonce as string), nonce + 1n);
+    service.drop(hash);
+  });
+
   it("reports an execution the RPC never includes as stuck, without sending it anywhere else", async () => {
     const blackHole = await startBlackHoleRpc(chain.rpc);
     const stuckSigner = await serve(

@@ -86,6 +86,16 @@ export async function serve(session: SignerSession, options: ServeOptions): Prom
         return send(res, 409, { error: (error as Error).message });
       }
     }
+    if (req.method === "POST" && url.pathname === "/api/reject") {
+      const body = (await readJson(req)) as { safeTxHash?: unknown; preview?: unknown };
+      const hash = body.safeTxHash;
+      if (typeof hash !== "string" || !isHex(hash) || hash.length !== 66) return send(res, 400, { error: "safeTxHash must be a 32-byte hex string" });
+      try {
+        return send(res, 200, await session.reject(hash, body.preview === true));
+      } catch (error) {
+        return send(res, 409, { error: (error as Error).message });
+      }
+    }
     if (req.method === "POST" && url.pathname === "/api/propose") {
       const body = (await readJson(req)) as { input?: unknown; preview?: unknown };
       try {

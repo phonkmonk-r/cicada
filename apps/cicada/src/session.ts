@@ -15,6 +15,7 @@ import {
   deploymentsFor,
   describeRevert,
   evaluate,
+  exposedSlotIds,
   execTransactionData,
   packSignatures,
   preValidatedSignature,
@@ -751,9 +752,9 @@ export class SignerSession {
       const { state, owner, ownerError } = await this.snapshot();
       if (!owner) throw new Error(ownerError ?? "your current owner key could not be resolved");
       const queue = this.withDirect(state, await this.options.txService.pending(this.options.safe, state.nonce, { fresh: true }));
-      // A recovery is proposed at the current nonce on purpose: landing it cancels the transaction it replaces.
-      const pendingOthers = options.replacing ? queue.filter((tx) => tx.tx.nonce !== state.nonce) : queue;
-      if (pendingOthers.length > 0) throw new Error(`transaction #${pendingOthers[0]!.tx.nonce} is still pending: execute it or replace it in Safe{Wallet} first`);
+      // A recovery or rejection is proposed at the current nonce on purpose: landing it cancels the transaction it
+      // replaces. It rotates every exposed key, so later transactions may stay queued; the rules still check exposure.
+      if (!options.replacing && queue.length > 0) throw new Error(`transaction #${queue[0]!.tx.nonce} is still pending: execute or reject it first`);
 
       const call = buildProposal(input, this.context(state));
       await this.check(input, state, call);
@@ -813,6 +814,20 @@ export class SignerSession {
     if (!exposure) throw new Error("no exposed keys to replace");
     const result = await this.propose({ kind: "force-rotate", slotIds: exposure.slotIds }, preview, { replacing: true });
     return { ...result, slotIds: exposure.slotIds };
+  }
+
+  /**
+   * Rejects the next pending transaction (wrong, or no longer wanted, like an expired order) by proposing a
+   * force-rotate at its nonce: whichever of the two executes, the other can never run. It rotates every exposed slot
+   * (the rejected transaction's confirmers, other queued confirmers, the signing log's keys) and this signer's own,
+   * so the list is never empty. With `preview`, only describes it.
+   */
+  async reject(safeTxHash: Hex, preview = false): Promise<ProposalResult & { slotIds: number[] }> {
+    const { state, owner, pending, tx } = await this.load(safeTxHash);
+    if (tx.tx.nonce !== state.nonce) throw new Error(`only the next transaction (#${state.nonce}) can be rejected now; execute or reject it first`);
+    const slotIds = [...new Set([...exposedSlotIds(state, pending, this.exposures(state, pending).exposed), owner.slot.slotId])].sort((a, b) => a - b);
+    const result = await this.propose({ kind: "force-rotate", slotIds }, preview, { replacing: true });
+    return { ...result, slotIds };
   }
 
   /**

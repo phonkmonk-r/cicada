@@ -7,7 +7,7 @@ import { executionInFlight, executionTone } from "../lib/execution";
 import { Avatar, Badge, PageHeader, useSoleSigner } from "../ui";
 import { NewTransaction } from "./NewTransaction";
 import { QueueCard } from "./QueueCard";
-import { Recover } from "./Recover";
+import { Recover, Reject } from "./Recover";
 import { TxDetails } from "./TxDetails";
 
 const EXECUTION_POLL_MS = 3_000;
@@ -120,6 +120,9 @@ function TxCard({
   const busy = useRef(false);
   const sole = useSoleSigner();
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  // Only the next transaction can be replaced; a later one becomes next once this one executes or is rejected.
+  const canReject = item.nonce === status.nonce && status.me !== undefined;
   const needed = Math.max(status.threshold - 1, 0);
   const counting = item.confirmations.filter((c) => c.counts).length;
   const { action, blockers, warnings } = item.verdict;
@@ -257,17 +260,27 @@ function TxCard({
         </div>
       )}
 
-      {stage.kind !== "confirmed" && stage.kind !== "executing" && (
+      {rejecting && stage.kind !== "executing" && <Reject nonce={item.nonce} safeTxHash={item.safeTxHash} onProposed={onRefresh} onCancel={() => setRejecting(false)} />}
+
+      {!rejecting && stage.kind !== "confirmed" && stage.kind !== "executing" && (
         <>
-          {action === "none" ? (
-            blockers.length > 0 && <p className="blocked muted small">{blockers[0]}</p>
-          ) : stage.kind === "idle" || stage.kind === "failed" ? (
-            <div className="tx-footer">
-              <button type="button" className="primary" onClick={() => setStage({ kind: "review" })}>
-                {actionLabel}
-              </button>
-            </div>
-          ) : (
+          {action === "none" && blockers.length > 0 && <p className="blocked muted small">{blockers[0]}</p>}
+          {stage.kind === "idle" || stage.kind === "failed" ? (
+            (actionLabel || canReject) && (
+              <div className="tx-footer">
+                {canReject && (
+                  <button type="button" onClick={() => setRejecting(true)}>
+                    Reject
+                  </button>
+                )}
+                {actionLabel && (
+                  <button type="button" className="primary" onClick={() => setStage({ kind: "review" })}>
+                    {actionLabel}
+                  </button>
+                )}
+              </div>
+            )
+          ) : action === "none" ? null : (
             <Review action={action} status={status} item={item} sole={sole} working={stage.kind === "working"} onRun={() => void run()} onCancel={() => setStage({ kind: "idle" })} />
           )}
         </>

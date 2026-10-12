@@ -710,6 +710,7 @@ handle("signer:execution", (hash: unknown) => requireSession().execution(require
 handle("signer:executions", () => requireSession().recentExecutions());
 handle("signer:speedUp", (hash: unknown) => requireSession().speedUp(requireHash(hash)));
 handle("signer:recover", (preview: unknown) => requireSession().recover(preview === true));
+handle("signer:reject", (hash: unknown, preview: unknown) => requireSession().reject(requireHash(hash), preview === true));
 handle("signer:propose", (input: unknown, preview: unknown) => requireSession().propose(input as never, preview === true));
 handle("signer:refill", () => requireSession().refill());
 handle("signer:skipUsedKeys", () => requireSession().skipUsedKeysInput());

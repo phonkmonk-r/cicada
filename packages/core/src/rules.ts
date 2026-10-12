@@ -63,6 +63,17 @@ function usableConfirmations(state: SafeState, pending: PendingTx): Confirmation
 }
 
 /**
+ * Slots whose current key is exposed without having rotated: it confirmed a pending transaction, or the signing log
+ * recorded it (`exposed`). A transaction that force-rotates all of them is a recovery, and a rejection rotates them.
+ */
+export function exposedSlotIds(state: SafeState, queue: readonly PendingTx[], exposed: readonly Address[] = []): number[] {
+  const keys = new Set<string>();
+  for (const other of queue) for (const c of usableConfirmations(state, other)) keys.add(c.owner.toLowerCase());
+  for (const key of exposed) keys.add(key.toLowerCase());
+  return state.slots.filter((slot) => keys.has(slot.owner.toLowerCase())).map((slot) => slot.slotId);
+}
+
+/**
  * Decides whether `me` may confirm or execute `pending`, enforcing the rules the guard and the design depend on:
  * the last signer executes; no more than threshold - 1 off-chain confirmations; transactions in nonce order; every
  * involved slot has a staged address; and confirmations never expose a full threshold of keys before rotation.
@@ -96,6 +107,8 @@ export function evaluate(input: EvaluateInput): Verdict {
     blockers.push("the gas refund names a token or a receiver: the guard only allows an ETH refund to the executor");
   }
   if (escape) warnings.push("escape hatch: nobody rotates in this transaction; every signer's key must be treated as burned");
+  const rivals = queue.filter((other) => other.tx.nonce === pending.tx.nonce && other.safeTxHash.toLowerCase() !== pending.safeTxHash.toLowerCase()).length;
+  if (rivals > 0) warnings.push(`${rivals} other transaction(s) also use nonce ${pending.tx.nonce}: only one of them can ever execute`);
 
   for (const confirmation of pending.confirmations) {
     if (!isOwner(state, confirmation.owner)) {
@@ -140,9 +153,11 @@ export function evaluate(input: EvaluateInput): Verdict {
   const exposedBefore = new Set<string>();
   for (const other of queue) for (const c of usableConfirmations(state, other)) exposedBefore.add(c.owner.toLowerCase());
   for (const key of input.exposed ?? []) if (isOwner(state, key)) exposedBefore.add(key.toLowerCase());
-  const exposedSlots = state.slots.filter((slot) => exposedBefore.has(slot.owner.toLowerCase())).map((slot) => slot.slotId);
+  const exposedSlots = exposedSlotIds(state, queue, input.exposed);
+  // A recovery leaves no exposed key behind: it force-rotates the exposed slots, and its own signers rotate anyway.
   const rotates = forceRotatedSlots(pending, state.guard);
-  const recovery = exposedSlots.length > 0 && rotates !== undefined && exposedSlots.every((slotId) => rotates.includes(slotId));
+  const signers = new Set([...valid, { owner: me }].map((c) => slotOf(c.owner)?.slotId));
+  const recovery = exposedSlots.length > 0 && rotates !== undefined && exposedSlots.every((slotId) => rotates.includes(slotId) || signers.has(slotId));
   if (recovery) return verdict("confirm");
   if (exposedBefore.size >= threshold) {
     blockers.push(`${exposedBefore.size} owners have exposed but unrotated keys (threshold ${threshold}): replace them (force-rotate slots ${exposedSlots.join(", ")}) before anything else`);

@@ -387,6 +387,80 @@ contract RotationGuardTest is RotationFixture {
         assertEq(guard.getSlot(address(safe), 0).staged.length, 4);
     }
 
+    /*//////////////////////////////////////////////////////////////
+                               REJECTION
+    //////////////////////////////////////////////////////////////*/
+
+    function forceRotateTx(uint256 a, uint256 b, uint256 c, uint256 count) internal view returns (SafeTx memory) {
+        uint256[] memory slots = new uint256[](count);
+        uint256[3] memory ids = [a, b, c];
+        for (uint256 i = 0; i < count; ++i) slots[i] = ids[i];
+        return call(address(guard), 0, abi.encodeCall(guard.forceRotate, (slots)));
+    }
+
+    /// @dev Cicada's Reject: a force-rotate at the same nonce. Once it executes, the signed original can never run,
+    ///      and the slot that confirmed the original holds a fresh key.
+    function test_reject_replacementCancelsSignedTransaction() public {
+        SafeTx memory original = call(recipient, 1, "");
+        address confirmer = currentOwner(0);
+        (bytes memory originalSigs, address originalExecutor) = prepareBySlots(original, 0, 1);
+        uint256 nonce = safe.nonce();
+        uint256 paid = recipient.balance;
+
+        assertTrue(execBySlots(forceRotateTx(0, 0, 0, 1), 2, 1));
+        assertEq(safe.nonce(), nonce + 1);
+        assertFalse(safe.isOwner(confirmer));
+        for (uint256 slot = 0; slot < 3; ++slot) assertEq(currentOwner(slot), treeAddress(slot, 1));
+
+        vm.expectRevert();
+        execRaw(original, originalSigs, originalExecutor);
+        // Not even with the confirmer's old signature and a current owner executing.
+        address[] memory signers = new address[](2);
+        bytes[] memory sigs = new bytes[](2);
+        (signers[0], sigs[0]) = (confirmer, _slice(originalSigs, confirmer < originalExecutor ? 0 : 65));
+        address executor = currentOwner(1);
+        (signers[1], sigs[1]) = (executor, preValidatedSignature(executor));
+        bytes memory stale = packSignatures(signers, sigs);
+        vm.expectRevert();
+        execRaw(original, stale, executor);
+        assertEq(recipient.balance, paid);
+        assertEq(safe.nonce(), nonce + 1);
+    }
+
+    /// @dev If the original wins the race, the rejection signed for the same nonce can never run.
+    function test_reject_lostRaceRejectionCannotRun() public {
+        SafeTx memory rejection = forceRotateTx(0, 2, 0, 2);
+        (bytes memory rejectionSigs, address rejectionExecutor) = prepareBySlots(rejection, 2, 1);
+        assertTrue(execBySlots(call(recipient, 1, ""), 0, 1));
+        vm.expectRevert();
+        execRaw(rejection, rejectionSigs, rejectionExecutor);
+    }
+
+    /// @dev Safe{Wallet}'s Reject is an empty self-call with safeTxGas and gasPrice 0; the guard refuses it, which is
+    ///      why Cicada rejects with a force-rotate instead.
+    function test_reject_safeWalletZeroGasRejectionIsRefused() public {
+        SafeTx memory t = call(address(safe), 0, "");
+        t.safeTxGas = 0;
+        (bytes memory sigs, address executor) = prepareBySlots(t, 0, 1);
+        vm.expectRevert(IRotationGuard.SafeTxGasRequired.selector);
+        execRaw(t, sigs, executor);
+    }
+
+    /// @dev A rejection lists every exposed slot plus the rejecter's own, so its signers may be force-rotated too:
+    ///      each slot still moves exactly one key.
+    function test_reject_signersInTheListRotateOnce() public {
+        assertTrue(execBySlots(forceRotateTx(0, 1, 2, 3), 2, 1));
+        for (uint256 slot = 0; slot < 3; ++slot) {
+            assertEq(currentOwner(slot), treeAddress(slot, 1));
+            assertEq(guard.getSlot(address(safe), slot).staged.length, 4);
+        }
+    }
+
+    function _slice(bytes memory data, uint256 start) private pure returns (bytes memory out) {
+        out = new bytes(65);
+        for (uint256 i = 0; i < 65; ++i) out[i] = data[start + i];
+    }
+
     function test_skipTo() public {
         assertTrue(execBySlots(call(address(guard), 0, abi.encodeCall(guard.skipTo, (2, 9))), 0, 1));
         IRotationGuard.SlotView memory view_ = guard.getSlot(address(safe), 2);

@@ -8,7 +8,7 @@ import { safeAbi } from "../src/abi/safe.js";
 import { MAINNET } from "../src/addresses.js";
 import { batch, guardCalls, safeCalls } from "../src/calls.js";
 import { decodeActions } from "../src/decode.js";
-import { evaluate, forceRotatedSlots, type EvaluateInput } from "../src/rules.js";
+import { evaluate, exposedSlotIds, forceRotatedSlots, type EvaluateInput } from "../src/rules.js";
 import { plainSafeTx } from "../src/safetx.js";
 import type { SafeState, SlotState } from "../src/state.js";
 import type { Confirmation, PendingTx } from "../src/txservice.js";
@@ -185,6 +185,34 @@ describe("decodeActions", () => {
     assert.equal(byExposed.action, "confirm");
     assert.deepEqual(forceRotatedSlots(pending([], guardCalls.forceRotate(GUARD, [1, 2])), GUARD), [1, 2]);
     assert.equal(forceRotatedSlots(pending(), GUARD), undefined);
+  });
+
+  it("lists exposed slots from queued confirmations and the signing log, never rotated-out keys", () => {
+    const queue = [pending([confirmation(A), confirmation(ROTATED)]), pending([confirmation(A, "APPROVED_HASH")], { nonce: 6n }, "0x02")];
+    assert.deepEqual(exposedSlotIds(state(), queue), [0]);
+    assert.deepEqual(exposedSlotIds(state(), queue, [C, ROTATED]), [0, 2]);
+    assert.deepEqual(exposedSlotIds(state(), []), []);
+  });
+
+  it("rejects a fully confirmed transaction at threshold 3 with a force-rotate at its nonce, without blocking", () => {
+    const three = state({ threshold: 3 });
+    // A and B confirmed the unwanted transaction: threshold - 1 keys are public, so it could execute any moment.
+    const unwanted = pending([confirmation(A), confirmation(B)], {}, "0x0a");
+    // C proposes the rejection; it leaves C's slot out of the list, since C rotates as a signer anyway.
+    const rejection = (confirmations: Confirmation[]) => pending(confirmations, guardCalls.forceRotate(GUARD, [0, 1]), "0x0b");
+    const ev = (me: Address, tx: PendingTx) => evaluate({ state: three, pending: tx, queue: [unwanted, tx], me, decode: DECODE });
+
+    const proposed = ev(C, rejection([]));
+    assert.equal(proposed.action, "confirm", proposed.blockers.join());
+    assert.match(proposed.warnings.join(), /1 other transaction\(s\) also use nonce 5: only one of them can ever execute/);
+    const second = ev(A, rejection([confirmation(C)]));
+    assert.equal(second.action, "confirm", "C's own exposed key is covered: it rotates when the rejection executes");
+    const last = ev(B, rejection([confirmation(C), confirmation(A)]));
+    assert.equal(last.action, "execute");
+    assert.deepEqual(last.executeWith?.map((s) => s.owner), [C, A]);
+
+    const transfer = ev(A, pending([confirmation(C)], { to: C }, "0x0c"));
+    assert.equal(transfer.action, "none", "a plain transaction at the same nonce is not a recovery");
   });
 
   it("refuses a second execution while the signer's key still has one out", () => {

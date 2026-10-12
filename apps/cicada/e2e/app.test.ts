@@ -156,6 +156,34 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
     await page.getByText("No pending transactions").waitFor();
   });
 
+  it("rejects a confirmed transaction with a force-rotate at its nonce, so it can never run", async () => {
+    const unwanted = service.propose(plainSafeTx({ to: RECIPIENT, value: parseEther("0.5"), data: "0x", operation: 0, nonce: 3n }));
+    await signer(2).confirm(unwanted);
+    const paid = await chain.client.getBalance({ address: RECIPIENT });
+
+    await nav("Overview");
+    await nav("Transactions");
+    const card = page.locator(".tx", { hasText: "Send 0.5 ETH" });
+    await card.getByRole("button", { name: "Reject" }).click();
+    await card.getByText("can never run").waitFor();
+    await card.getByRole("button", { name: "Review rejection" }).click();
+    await card.getByText("Rotate slot(s) 0, 2").waitFor();
+    await card.getByRole("button", { name: "Sign & propose" }).click();
+    await page.getByText(/Proposed #3: fresh keys for slot 0, slot 2/).waitFor();
+
+    const queued = await new TxService(foundry.id, { baseUrl: service.baseUrl }).pending(chain.safe, 3n, { fresh: true });
+    assert.equal(queued.length, 2, "the rejection sits next to the transaction it replaces");
+    const rejection = queued.find((tx) => tx.safeTxHash !== unwanted)!;
+    const sent = await signer(1).execute(rejection.safeTxHash);
+    assert.equal((await chain.client.waitForTransactionReceipt({ hash: sent.transactionHash! })).status, "success");
+    assert.equal(await chain.client.getBalance({ address: RECIPIENT }), paid, "the rejected transfer never ran");
+
+    await nav("Overview");
+    await page.getByText("2 of 3 signers · nonce 4").waitFor();
+    await nav("Transactions");
+    await page.getByText("No pending transactions").waitFor();
+  });
+
   it("gives dApps a wallet they can extend, as MetaMask-era code expects", async () => {
     // Uniswap sets a legacy MetaMask field on window.ethereum at startup; a frozen provider made that throw and
     // the whole app render blank. This page does the same before asking for a transaction.
