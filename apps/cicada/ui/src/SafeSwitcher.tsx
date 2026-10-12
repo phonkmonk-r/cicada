@@ -1,38 +1,22 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { desktop, type SafeSummary, type StatusView } from "./api";
 import { explorer, short } from "./format";
 import { Skeleton } from "./Skeleton";
 import { IconCheck, IconCopy, IconExternal, IconPlus, IconSelector } from "./icons";
-import { Avatar } from "./ui";
+import { Avatar, ErrorNotice, ListRow, usePopover } from "./components";
 
 /** The Safe card at the top of the sidebar; in the desktop app it opens a list of the profile's Safes. */
 export function SafeSwitcher({ status, onSwitched, onAdd }: { status: StatusView; onSwitched: () => void; onAdd?: () => void }) {
-  const [open, setOpen] = useState(() => window.location.hash.includes("switcher"));
+  const { open, setOpen, box, triggerProps } = usePopover(window.location.hash.includes("switcher"));
   const [safes, setSafes] = useState<SafeSummary[]>();
   const [error, setError] = useState<string>();
   const [forgetting, setForgetting] = useState<string>();
-  const box = useRef<HTMLDivElement>(null);
-  const chipButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open || !desktop) return;
     setSafes(undefined);
     void desktop.listSafes().then(setSafes, (caught: Error) => setError(caught.message));
-    const close = (event: MouseEvent) => {
-      if (box.current && !box.current.contains(event.target as Node)) setOpen(false);
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      chipButton.current?.focus();
-    };
-    window.addEventListener("mousedown", close);
-    window.addEventListener("keydown", escape);
-    return () => {
-      window.removeEventListener("mousedown", close);
-      window.removeEventListener("keydown", escape);
-    };
   }, [open]);
 
   async function forget(key: string) {
@@ -88,7 +72,7 @@ export function SafeSwitcher({ status, onSwitched, onAdd }: { status: StatusView
 
   return (
     <div className="safe-switcher" ref={box}>
-      <button ref={chipButton} type="button" className={`safe-chip ${open ? "open" : ""}`} title="Switch Safe" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
+      <button type="button" className={`safe-chip ${open ? "open" : ""}`} title="Switch Safe" {...triggerProps}>
         {chip}
         <IconSelector className="safe-chip-chevron" width="16" height="16" />
       </button>
@@ -114,35 +98,44 @@ export function SafeSwitcher({ status, onSwitched, onAdd }: { status: StatusView
                 </div>
               </div>
             ) : (
-            <div key={safe.key} className="safe-option-row">
-            <button type="button" role="menuitem" className={`safe-option ${safe.active ? "active" : ""}`} onClick={() => void select(safe.key)}>
-              <Avatar address={safe.safe} size={24} />
-              <span className="safe-option-text">
-                <span className="mono small">{short(safe.safe)}</span>
-                <span className="muted small">
-                  {safe.chainName} · slot {safe.slotId}
-                  {safe.error ? " · not connected" : ""}
-                </span>
-              </span>
-              {(safe.needsYou ?? 0) > 0 && <span className="count" title="Transactions waiting for you">{safe.needsYou}</span>}
-              {safe.queued > 0 && (
-                <span className="count muted-count" title="Actions in this Safe's queue">
-                  {safe.queued}
-                </span>
-              )}
-            </button>
-            <SafeActions safe={safe.safe} chainId={safe.chainId} />
-            <button type="button" className="icon-button" title="Forget on this computer" aria-label={`Forget ${short(safe.safe)}`} onClick={() => setForgetting(safe.key)}>
-              ✕
-            </button>
-            </div>
+              <ListRow
+                key={safe.key}
+                role="menuitem"
+                active={safe.active}
+                onClick={() => void select(safe.key)}
+                leading={<Avatar address={safe.safe} size={24} />}
+                title={<span className="mono">{short(safe.safe)}</span>}
+                subtitle={`${safe.chainName} · slot ${safe.slotId}${safe.error ? " · not connected" : ""}`}
+                trailing={
+                  <>
+                    {(safe.needsYou ?? 0) > 0 && (
+                      <span className="count" title="Transactions waiting for you">
+                        {safe.needsYou}
+                      </span>
+                    )}
+                    {safe.queued > 0 && (
+                      <span className="count muted-count" title="Actions in this Safe's queue">
+                        {safe.queued}
+                      </span>
+                    )}
+                  </>
+                }
+                actions={
+                  <>
+                    <SafeActions safe={safe.safe} chainId={safe.chainId} />
+                    <button type="button" className="icon-button" title="Forget on this computer" aria-label={`Forget ${short(safe.safe)}`} onClick={() => setForgetting(safe.key)}>
+                      ✕
+                    </button>
+                  </>
+                }
+              />
             ),
           )}
-          {error && <div className="note critical safe-menu-note">{error}</div>}
+          <ErrorNotice error={error} className="safe-menu-note" />
           {onAdd && (
             <button
               type="button"
-              className="safe-option add"
+              className="list-row menu-add"
               onClick={() => {
                 setOpen(false);
                 onAdd();

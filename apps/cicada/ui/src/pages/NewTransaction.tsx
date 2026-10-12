@@ -3,10 +3,10 @@ import { formatUnits, isAddress } from "viem";
 
 import { api, type DappCall, type ProposalInput, type ProposalResult, type StatusView, type TokenInfo } from "../api";
 import { eth } from "../format";
-import { IconAlert, IconCheck } from "../icons";
+import { IconCheck } from "../icons";
 import { parseAmount } from "../lib/amount";
 import { sendingLabel, sendLabel } from "../lib/execution";
-import { Avatar, Badge, Dots, useSoleSigner } from "../ui";
+import { Avatar, Badge, Dots, Notice, ReviewPanel, SigningSteps, useSoleSigner } from "../components";
 import { ContractCall } from "./ContractCall";
 
 type Tab = "eth" | "erc20" | "call" | "force-rotate";
@@ -153,33 +153,9 @@ export function NewTransaction({
       </div>
 
       {review ? (
-        <div className="review-panel">
-          <div className="metric-label">Proposal #{review.nonce}</div>
-          {review.actions.map((action, i) => (
-            <div key={i} className={`tx-action ${action.kind}`}>
-              {action.summary}
-            </div>
-          ))}
-          {review.warnings.map((warning) => (
-            <div key={warning} className="note warning">
-              <IconAlert width="15" height="15" />
-              <span>{warning}</span>
-            </div>
-          ))}
-          <ul className="checklist">
-            {sole ? (
-              <>
-                <li>Sent by your current key, the only signature needed</li>
-                <li>You rotate to your next key</li>
-              </>
-            ) : (
-              <>
-                <li>Signed with your current key as your confirmation</li>
-                <li>Another signer executes; you both rotate</li>
-              </>
-            )}
-          </ul>
-        </div>
+        <ReviewPanel label={`Proposal #${review.nonce}`} actions={review.actions} warnings={review.warnings}>
+          <SigningSteps sole={sole} />
+        </ReviewPanel>
       ) : tab === "call" ? (
         <ContractCall onChange={onCustom} />
       ) : tab === "force-rotate" ? (
@@ -248,16 +224,14 @@ export function NewTransaction({
       )}
 
       {queued > 0 && (
-        <div className="note ok">
-          <IconCheck width="15" height="15" />
-          <span>Added to the queue. Add more, or review the queue below and propose it.</span>
-        </div>
+        <Notice tone="ok">
+          Added to the queue. Add more, or review the queue below and propose it.
+        </Notice>
       )}
       {error && (
-        <div className="note critical">
-          <IconAlert width="15" height="15" />
-          <span>{error.charAt(0).toUpperCase() + error.slice(1)}</span>
-        </div>
+        <Notice tone="critical">
+          {error.charAt(0).toUpperCase() + error.slice(1)}
+        </Notice>
       )}
 
       <div className="tx-footer">

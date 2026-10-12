@@ -5,6 +5,7 @@ import { useBookmarks } from "./bookmarks";
 import { useSignerData } from "./data";
 import { short } from "./format";
 import { IconChevronDown, IconGlobe, IconLock, IconOverview, IconRefresh, IconSettings, IconSigners, IconTransactions, Logo } from "./icons";
+import { Gallery } from "./components/Gallery";
 import { JoinSafe } from "./JoinSafe";
 import { SafeSwitcher } from "./SafeSwitcher";
 import { SavedPages } from "./SavedPages";
@@ -16,7 +17,7 @@ import { Overview } from "./pages/Overview";
 import { Settings } from "./pages/Settings";
 import { Signers } from "./pages/Signers";
 import { Transactions } from "./pages/Transactions";
-import { Avatar, Backdrop, SoleSignerContext } from "./ui";
+import { Avatar, Backdrop, Notice, SoleSignerContext } from "./components";
 import { AddProfile, ConnectLedger, ProfilePicker, UnlockWallet } from "./Wallet";
 
 export function App() {
@@ -33,6 +34,15 @@ export function App() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // The Components page, for checking the kit: set location.hash to "#components" (the app never reloads itself).
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const onHash = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  if (hash === "#components") return <Gallery />;
 
   if (!desktop) {
     if (!canConnect) {
@@ -315,8 +325,16 @@ function Shell({
 
       <main key={switches} className={page === "browse" ? "content full" : "content"}>
         <SoleSignerContext.Provider value={status?.threshold === 1}>
-          {data.error && <div className="note critical banner-top">Can't reach the signer: {data.error}</div>}
-          {status?.queueError && <div className="note warning banner-top">Transaction Service unavailable: pending transactions may be missing.</div>}
+          {data.error && (
+            <Notice tone="critical" className="banner-top">
+              Can't reach the signer: {data.error}
+            </Notice>
+          )}
+          {status?.queueError && (
+            <Notice tone="warning" className="banner-top">
+              Transaction Service unavailable: pending transactions may be missing.
+            </Notice>
+          )}
           {!status && !data.error && <OverviewSkeleton />}
           {status && page === "overview" && <Overview status={status} queue={queue} onOpenTransactions={() => setPage("transactions")} />}
           {status && page === "transactions" && <Transactions status={status} queue={queue} draft={data.draft} executions={data.executions} onBusy={data.setBusy} onRefresh={() => void data.refresh()} />}

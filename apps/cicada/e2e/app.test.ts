@@ -491,4 +491,25 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
     await page.locator(".operator-box").getByText(operator).waitFor();
     assert.equal(readdirSync(join(userData, "profiles")).length, 1, "the new seed is saved as a profile");
   });
+
+  it("renders every part of the component kit on the Components page", async () => {
+    await page.evaluate(() => {
+      window.location.hash = "#components";
+    });
+    await page.getByRole("heading", { name: "Components" }).waitFor();
+    for (const section of ["Colors", "Type", "Buttons", "Badges and counts", "Notices", "Fields", "List rows", "Menu", "Review panel", "Identity"]) {
+      await page.getByRole("region", { name: section }).waitFor();
+    }
+    // The field with an error is marked invalid and described by its message.
+    const password = page.getByLabel("Password", { exact: true });
+    assert.equal(await password.getAttribute("aria-invalid"), "true");
+    assert.match((await page.getByRole("alert").filter({ hasText: "Wrong password" }).textContent()) ?? "", /Try again/);
+    // The shared popover closes on Escape and gives focus back to its trigger.
+    const trigger = page.getByRole("button", { name: "Open a menu" });
+    await trigger.click();
+    await page.getByRole("menuitem", { name: "First choice" }).waitFor();
+    await page.keyboard.press("Escape");
+    await page.getByRole("menuitem", { name: "First choice" }).waitFor({ state: "detached" });
+    assert.equal(await trigger.evaluate((el) => el === document.activeElement), true);
+  });
 });

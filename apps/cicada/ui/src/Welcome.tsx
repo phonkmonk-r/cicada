@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import { IconKey, IconLock, IconRefresh, IconSigners, Logo } from "./icons";
-import { Backdrop } from "./ui";
+import { Backdrop } from "./components";
 
 interface IntroPage {
   icon?: ReactNode;

@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { api, desktop, type JoinProgress, type ProposalInput, type ProposalResult } from "../api";
-import { IconAlert, IconCheck } from "../icons";
 import { sendingLabel, sendLabel } from "../lib/execution";
-import { useSoleSigner } from "../ui";
+import { ErrorNotice, Notice, ReviewPanel, useSoleSigner } from "../components";
 
 /**
  * Renews this signer's key list: derives a fresh list from the seed (or Ledger), then proposes switching the slot to
@@ -66,27 +65,14 @@ export function RenewKeys({ compact = false }: { compact?: boolean }) {
         </div>
       )}
       {review && stage !== "done" && (
-        <div className="review-panel">
-          {review.actions.map((action, i) => (
-            <div key={i} className={`tx-action ${action.kind}`}>
-              {action.summary}
-            </div>
-          ))}
-          {review.warnings.map((warning) => (
-            <div key={warning} className="note warning">
-              <IconAlert width="15" height="15" />
-              <span>{warning}</span>
-            </div>
-          ))}
-        </div>
+        <ReviewPanel actions={review.actions} warnings={review.warnings} />
       )}
       {stage === "done" && review && (
-        <div className="note ok">
-          <IconCheck width="15" height="15" />
-          <span>{sole ? `Executing #${review.nonce}. Cicada switches to your new key list once it lands.` : `Proposed #${review.nonce}. Once another signer executes it, Cicada switches to your new key list by itself.`}</span>
-        </div>
+        <Notice tone="ok">
+          {sole ? `Executing #${review.nonce}. Cicada switches to your new key list once it lands.` : `Proposed #${review.nonce}. Once another signer executes it, Cicada switches to your new key list by itself.`}
+        </Notice>
       )}
-      {error && <div className="note critical">{error.charAt(0).toUpperCase() + error.slice(1)}</div>}
+      <ErrorNotice error={error} />
       {stage !== "done" && (
         <div className="tx-footer">
           {stage === "review" || stage === "signing" ? (

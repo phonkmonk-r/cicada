@@ -7,7 +7,7 @@ import { short } from "../format";
 import { IconAlert, IconBack, IconCheck, IconClose, IconForward, IconGlobe, IconPlus, IconRefresh, IconStar } from "../icons";
 import { isSaved, tabLabel } from "../lib/browser";
 import { requestValue, sendingLabel, sendingNote, sendLabel } from "../lib/execution";
-import { Badge, useSoleSigner } from "../ui";
+import { Badge, Notice, ReviewPanel, SigningSteps, useSoleSigner } from "../components";
 
 /** Start page apps; `colour` paints the letter tile, since the page's CSP keeps remote icons out. */
 const SUGGESTIONS = [
@@ -164,10 +164,9 @@ export function Browse({ status, request, queueMode }: { status: StatusView; req
       </form>
 
       {error && (
-        <div className="note critical browser-note">
-          <IconAlert width="15" height="15" />
-          <span>{error.charAt(0).toUpperCase() + error.slice(1)}</span>
-        </div>
+        <Notice tone="critical" className="browser-note">
+          {error.charAt(0).toUpperCase() + error.slice(1)}
+        </Notice>
       )}
       {proposed && request === null && (
         <div className="note ok browser-note">
@@ -347,18 +346,7 @@ function RequestReview({
       <h2>Wants the Safe to</h2>
 
       {preview ? (
-        <div className="review-panel">
-          {preview.actions.map((action, i) => (
-            <div key={i} className={`tx-action ${action.kind}`}>
-              {action.summary}
-            </div>
-          ))}
-          {preview.warnings.map((warning) => (
-            <div key={warning} className="note warning">
-              <IconAlert width="15" height="15" />
-              <span>{warning}</span>
-            </div>
-          ))}
+        <ReviewPanel actions={preview.actions} warnings={preview.warnings}>
           <dl className="kv">
             <dt>Sends</dt>
             <dd>{total > 0n ? `${formatEther(total)} ETH` : "No ETH"}</dd>
@@ -367,20 +355,8 @@ function RequestReview({
               #{preview.nonce} on {status.chainName}
             </dd>
           </dl>
-          <ul className="checklist">
-            {sole ? (
-              <>
-                <li>Sent by your current key, the only signature needed</li>
-                <li>You rotate to your next key</li>
-              </>
-            ) : (
-              <>
-                <li>Signed with your current key as your confirmation</li>
-                <li>Another signer executes; you both rotate</li>
-              </>
-            )}
-          </ul>
-        </div>
+          <SigningSteps sole={sole} />
+        </ReviewPanel>
       ) : (
         !error && (
           <div className="note pending" role="status">
@@ -401,10 +377,9 @@ function RequestReview({
         </div>
       )}
       {error && (
-        <div className="note critical">
-          <IconAlert width="15" height="15" />
-          <span>{error.charAt(0).toUpperCase() + error.slice(1)}</span>
-        </div>
+        <Notice tone="critical">
+          {error.charAt(0).toUpperCase() + error.slice(1)}
+        </Notice>
       )}
       {working && (
         <div className="note pending" role="status">

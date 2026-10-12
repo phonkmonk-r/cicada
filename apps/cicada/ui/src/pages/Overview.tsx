@@ -7,7 +7,7 @@ import { LOW_GAS_WEI } from "../data";
 import { eth } from "../format";
 import { IconAlert, IconTransactions } from "../icons";
 import { nextStep, sendingLabel, sendLabel } from "../lib/execution";
-import { Address, Avatar, Badge, Dots, PageHeader, useSoleSigner } from "../ui";
+import { Address, Avatar, Badge, Dots, ErrorNotice, Notice, PageHeader, ReviewPanel, useSoleSigner } from "../components";
 
 export function Overview({ status, queue, onOpenTransactions }: { status: StatusView; queue: QueueItem[]; onOpenTransactions: () => void }) {
   const me = status.me;
@@ -62,10 +62,9 @@ export function Overview({ status, queue, onOpenTransactions }: { status: Status
         </section>
       ) : (
         <section className="card">
-          <div className="note critical">
-            <IconAlert width="15" height="15" />
-            <span>{status.meError ?? "Your key could not be resolved."}</span>
-          </div>
+          <Notice tone="critical">
+            {status.meError ?? "Your key could not be resolved."}
+          </Notice>
         </section>
       )}
 
@@ -141,15 +140,9 @@ function SkipUsedKeys() {
   return (
     <div className="skip-keys">
       {review && (
-        <div className="review-panel">
-          {review.actions.map((action, i) => (
-            <div key={i} className={`tx-action ${action.kind}`}>
-              {action.summary}
-            </div>
-          ))}
-        </div>
+        <ReviewPanel actions={review.actions} />
       )}
-      {error && <div className="note critical">{error}</div>}
+      <ErrorNotice error={error} />
       <div className="tx-footer">
         {review ? (
           <button

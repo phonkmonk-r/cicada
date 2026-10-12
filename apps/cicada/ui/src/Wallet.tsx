@@ -4,8 +4,8 @@ import { desktop, type ProfileView } from "./api";
 import { short } from "./format";
 import { checkedWordsMatch, newSeedPhrase, pickCheckedWords, positionsLabel, SEED_LENGTHS, type SeedLength } from "./lib/newSeed";
 import { MIN_PASSWORD, profileFormProblems, seedWordCount } from "./lib/profileForm";
-import { IconAlert, IconPlus } from "./icons";
-import { Avatar, Badge } from "./ui";
+import { IconPlus } from "./icons";
+import { Avatar, Badge, ErrorNotice, Field, ListRow, sentence } from "./components";
 
 type Kind = "seed" | "new" | "ledger";
 
@@ -118,7 +118,7 @@ export function AddProfile({ suggestedName, onDone, onCancel }: { suggestedName:
         </>
       )}
 
-      {error && <div className="note critical">{error}</div>}
+      <ErrorNotice error={error} />
       <div className="form-actions">
         {onCancel && (
           <button type="button" onClick={onCancel} disabled={working}>
@@ -286,36 +286,30 @@ export function ProfilePicker({ profiles, onPicked, onAdd }: { profiles: Profile
       <div className="profile-list">
         {profiles.map((profile) => (
           <div key={profile.id} className="profile-row">
-            <div className="profile-row-main">
-              <button
-                type="button"
-                className="profile-option"
-                onClick={() => {
-                  desktop!.selectProfile(profile.id).then(onPicked, (caught: Error) => setError(caught.message));
-                }}
-              >
-                <Avatar address={profile.operator} size={34} />
-                <span className="profile-option-text">
-                  <span className="profile-option-name">{profile.name}</span>
-                  <span className="muted small mono">
-                    {profile.safe ? `Safe ${short(profile.safe)}${profile.safeCount > 1 ? ` +${profile.safeCount - 1}` : ""}` : short(profile.operator)}
-                  </span>
-                </span>
-                <Badge tone={profile.kind === "ledger" ? "accent" : "neutral"}>{profile.kind === "ledger" ? "Ledger" : "Seed"}</Badge>
-              </button>
-              <button
-                type="button"
-                className="icon-button"
-                title="Remove from this computer"
-                aria-label={`Remove ${profile.name}`}
-                onClick={() => {
-                  setConfirm("");
-                  setRemoving(removing === profile.id ? undefined : profile.id);
-                }}
-              >
-                ✕
-              </button>
-            </div>
+            <ListRow
+              boxed
+              onClick={() => {
+                desktop!.selectProfile(profile.id).then(onPicked, (caught: Error) => setError(caught.message));
+              }}
+              leading={<Avatar address={profile.operator} size={34} />}
+              title={profile.name}
+              subtitle={<span className="mono">{profile.safe ? `Safe ${short(profile.safe)}${profile.safeCount > 1 ? ` +${profile.safeCount - 1}` : ""}` : short(profile.operator)}</span>}
+              trailing={<Badge tone={profile.kind === "ledger" ? "accent" : "neutral"}>{profile.kind === "ledger" ? "Ledger" : "Seed"}</Badge>}
+              actions={
+                <button
+                  type="button"
+                  className="icon-button"
+                  title="Remove from this computer"
+                  aria-label={`Remove ${profile.name}`}
+                  onClick={() => {
+                    setConfirm("");
+                    setRemoving(removing === profile.id ? undefined : profile.id);
+                  }}
+                >
+                  ✕
+                </button>
+              }
+            />
             {removing === profile.id && (
               <div className="profile-remove">
                 <p className="muted small">
@@ -335,7 +329,7 @@ export function ProfilePicker({ profiles, onPicked, onAdd }: { profiles: Profile
           </div>
         ))}
       </div>
-      {error && <div className="note critical">{error}</div>}
+      <ErrorNotice error={error} />
       <button type="button" className="add-row" onClick={onAdd}>
         <IconPlus /> Add a profile
       </button>
@@ -347,7 +341,7 @@ function ProfileHeader({ name, operator }: { name: string; operator: string }) {
   return (
     <div className="unlock-account">
       <Avatar address={operator} size={48} />
-      <span className="profile-option-name">{name}</span>
+      <span className="unlock-name">{name}</span>
       <span className="mono small">{short(operator)}</span>
     </div>
   );
@@ -399,28 +393,19 @@ export function UnlockWallet({ name, operator, onDone, onSwitch }: { name: strin
       }}
     >
       {operator && <ProfileHeader name={name} operator={operator} />}
-      <label className="field">
-        <span className="field-label">Password</span>
+      <Field label="Password" error={error && (error === "wrong password" ? "Wrong password. Try again." : sentence(error))}>
         <input
           ref={input}
           type="password"
           autoFocus
           autoComplete="current-password"
           value={password}
-          aria-invalid={error !== undefined}
-          aria-describedby={error ? "unlock-error" : undefined}
           onChange={(e) => {
             setPassword(e.target.value);
             setError(undefined);
           }}
         />
-      </label>
-      {error && (
-        <p id="unlock-error" className="field-error" role="alert">
-          <IconAlert width="13" height="13" />
-          {error === "wrong password" ? "Wrong password. Try again." : error.charAt(0).toUpperCase() + error.slice(1)}
-        </p>
-      )}
+      </Field>
       <button type="submit" className="primary block" disabled={password === "" || working}>
         {working ? "Unlocking…" : "Unlock"}
       </button>
@@ -452,7 +437,7 @@ export function ConnectLedger({ name, operator, onDone, onSwitch }: { name: stri
     <div className="auth-card narrow">
       <ProfileHeader name={name} operator={operator} />
       <p className="muted center">Connect this Ledger, unlock it and open the Ethereum app.</p>
-      {error && <div className="note critical">{error}</div>}
+      <ErrorNotice error={error} />
       <button type="button" className="primary block" disabled={working} onClick={() => void connect()}>
         {working ? "Connecting…" : "Connect Ledger"}
       </button>

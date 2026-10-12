@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { QueueItem, StatusView } from "../api";
 import { eth, short } from "../format";
 import { IconCheck, IconCopy } from "../icons";
-import { Address } from "../ui";
+import { Address } from "../components";
 
 /** Everything behind a transaction's one-line summary: each call's target, function and data, and the Safe transaction itself. */
 export function TxDetails({ item, status }: { item: QueueItem; status: StatusView }) {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { desktop, type Advanced, type DesktopState, type JoinProgress } from "./api";
+import { ErrorNotice } from "./components";
 
 const STAGES: Record<JoinProgress["stage"], string> = {
   network: "Finding the network",
@@ -131,7 +132,7 @@ export function JoinSafe({
           </div>
         </div>
       )}
-      {error && <div className="note critical">{error}</div>}
+      <ErrorNotice error={error} />
       <div className="form-actions">
         {onCancel && (
           <button type="button" onClick={onCancel} disabled={working}>

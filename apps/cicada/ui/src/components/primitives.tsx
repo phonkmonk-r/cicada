@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useContext, useState } from "react";
 
-import { explorer, short } from "./format";
-import { IconCheck, IconCopy, IconExternal } from "./icons";
+import { explorer, short } from "../format";
+import { IconCheck, IconCopy, IconExternal } from "../icons";
 
 /** Soft, heavily blurred fields of the brand colours behind the intro and the sign-in screens. */
 export function Backdrop() {

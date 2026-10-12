@@ -2,7 +2,7 @@ import type { SignerView, StatusView } from "../api";
 import { Manage } from "./Manage";
 import { LOW_GAS_WEI } from "../data";
 import { eth } from "../format";
-import { Address, Avatar, Badge, Dots, PageHeader } from "../ui";
+import { Address, Avatar, Badge, Dots, PageHeader } from "../components";
 
 export function Signers({ status, pending, queueMode, onQueued }: { status: StatusView; pending: number; queueMode: boolean; onQueued: () => void }) {
   return (

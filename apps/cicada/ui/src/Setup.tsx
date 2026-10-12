@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { formatEther } from "viem";
 
 import { desktop, type AddingView, type CreateStage, type CreatingView, type DesktopState, type JoinProgress } from "./api";
-import { IconCheck, IconCopy, IconPlus } from "./icons";
+import { IconCheck, IconChevronRight, IconCopy, IconPlus } from "./icons";
 import { JoinSafe } from "./JoinSafe";
-import { Address, Avatar, Badge } from "./ui";
+import { Address, Avatar, Badge, ErrorNotice, ListRow } from "./components";
 
 const CHECK_MS = 15_000;
 const SEPOLIA = 11155111;
@@ -68,13 +68,9 @@ export function Setup({ state, onDone, onCancel, onSwitchProfile }: { state: Des
   );
 }
 
+/** One way to connect a Safe; it leads to its own step, hence the chevron. */
 function ChoiceButton({ title, note, onClick }: { title: string; note: string; onClick: () => void }) {
-  return (
-    <button type="button" className="choice" onClick={onClick}>
-      <span className="choice-title">{title}</span>
-      <span className="muted small">{note}</span>
-    </button>
-  );
+  return <ListRow boxed title={title} subtitle={note} trailing={<IconChevronRight className="list-row-chevron" width="16" height="16" />} onClick={onClick} />;
 }
 
 function useDeriving() {
@@ -195,7 +191,7 @@ function CreateForm({ operator, onBack, onPlanned }: { operator: string; onBack:
       </label>
 
       {working && <Progress label="Generating your keys" percent={percent} />}
-      {error && <div className="note critical">{error}</div>}
+      <ErrorNotice error={error} />
       <div className="form-actions">
         <button type="button" onClick={onBack} disabled={working}>
           Back
@@ -241,7 +237,7 @@ function InviteForm({ onBack, onAccepted }: { onBack: () => void; onAccepted: ()
         <textarea rows={4} spellCheck={false} placeholder="rotation-invite:…" value={code} onChange={(e) => setCode(e.target.value)} disabled={working} />
       </label>
       {working && <Progress label="Generating your keys" percent={percent} />}
-      {error && <div className="note critical">{error.charAt(0).toUpperCase() + error.slice(1)}</div>}
+      <ErrorNotice error={error} />
       <div className="form-actions">
         <button type="button" onClick={onBack} disabled={working}>
           Back
@@ -412,7 +408,7 @@ function CreatorRoom({ view, onChange, onDone }: { view: CreatingView; onChange:
 
       {me && <GasAccountBox address={me.operator} chainId={view.chainId} balance={view.balance} estimatedCost={view.estimatedCost} />}
       {working && <Progress label={stage ? STAGE_LABEL[stage] : "Starting"} percent={stage === "joining" ? percent : undefined} />}
-      {error && <div className="note critical">{error.charAt(0).toUpperCase() + error.slice(1)}</div>}
+      <ErrorNotice error={error} />
 
       <div className="form-actions">
         <button
@@ -477,7 +473,7 @@ function SignerRoom({ view, onChange, onDone }: { view: CreatingView; onChange: 
         <span>Waiting for the creator to create the Safe</span>
       </div>
       {checking && progress && <Progress label="Connecting" percent={percent} />}
-      {error && <div className="note critical">{error.charAt(0).toUpperCase() + error.slice(1)}</div>}
+      <ErrorNotice error={error} />
       <div className="form-actions">
         <button type="button" onClick={() => void desktop!.createCancel().then(onChange)} disabled={checking}>
           Leave
@@ -525,7 +521,7 @@ function AddedForm({ onBack, onPrepared }: { onBack: () => void; onPrepared: () 
         <input placeholder="0x…" spellCheck={false} value={safe} onChange={(e) => setSafe(e.target.value)} disabled={working} />
       </label>
       {working && <Progress label="Generating your keys" percent={percent} />}
-      {error && <div className="note critical">{error}</div>}
+      <ErrorNotice error={error} />
       <div className="form-actions">
         <button type="button" onClick={onBack} disabled={working}>
           Back
@@ -593,7 +589,7 @@ function AddedRoom({ view, signer, onChange, onDone }: { view: AddingView; signe
         <span>Waiting for the signers to add you</span>
       </div>
       {checking && progress && <Progress label="Connecting" percent={percent} />}
-      {error && <div className="note critical">{error.charAt(0).toUpperCase() + error.slice(1)}</div>}
+      <ErrorNotice error={error} />
       <div className="form-actions">
         <button type="button" onClick={() => void desktop!.addingCancel().then(onChange)} disabled={checking}>
           Cancel

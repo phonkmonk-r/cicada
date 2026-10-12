@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { desktop, type DesktopState, type StatusView } from "../api";
 import { IconLock } from "../icons";
-import { Address, Badge, PageHeader } from "../ui";
+import { Address, Badge, ErrorNotice, PageHeader } from "../components";
 import { RenewKeys } from "./RenewKeys";
 
 export function Settings({
@@ -132,7 +132,7 @@ export function Settings({
               </button>
             </div>
           </details>
-          {error && <div className="note critical">{error}</div>}
+          <ErrorNotice error={error} />
         </section>
       )}
 

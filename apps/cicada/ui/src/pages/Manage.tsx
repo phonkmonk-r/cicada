@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from "react";
 
 import { api, type ProposalInput, type ProposalResult, type StatusView } from "../api";
-import { IconAlert, IconCheck } from "../icons";
+import { IconCheck } from "../icons";
 import { packagePreview } from "../lib/slotPackage";
 import { nextStep, sendingLabel, sendLabel } from "../lib/execution";
-import { Address, useSoleSigner } from "../ui";
+import { Address, ErrorNotice, Notice, ReviewPanel, useSoleSigner } from "../components";
 
 type Action = "add" | "remove" | "threshold" | "escape";
 
@@ -120,10 +120,9 @@ function Proposal({
   if (queued) {
     return (
       <div className="manage-panel">
-        <div className="note ok">
-          <IconCheck width="15" height="15" />
-          <span>Added to the queue. Propose it from Transactions.</span>
-        </div>
+        <Notice tone="ok">
+          Added to the queue. Propose it from Transactions.
+        </Notice>
         <div className="tx-footer">
           <button type="button" onClick={onClose}>
             Done
@@ -154,23 +153,11 @@ function Proposal({
   return (
     <div className="manage-panel">
       {review ? (
-        <div className="review-panel">
-          {review.actions.map((action, i) => (
-            <div key={i} className={`tx-action ${action.kind}`}>
-              {action.summary}
-            </div>
-          ))}
-          {review.warnings.map((warning) => (
-            <div key={warning} className="note warning">
-              <IconAlert width="15" height="15" />
-              <span>{warning}</span>
-            </div>
-          ))}
-        </div>
+        <ReviewPanel actions={review.actions} warnings={review.warnings} />
       ) : (
         children
       )}
-      {error && <div className="note critical">{error}</div>}
+      <ErrorNotice error={error} />
       <div className="tx-footer">
         <button type="button" onClick={review ? () => setReview(undefined) : onClose} disabled={working}>
           {review ? "Back" : "Cancel"}
@@ -264,10 +251,9 @@ function RemoveSigner({ status, queue, onClose }: { status: StatusView; queue: Q
         <ThresholdSelect value={next} max={Math.max(remaining, 1)} onChange={setNext} />
       </label>
       {removingMe && (
-        <div className="note warning">
-          <IconAlert width="15" height="15" />
-          <span>This removes you: once it executes, this app can no longer sign for the Safe.</span>
-        </div>
+        <Notice tone="warning">
+          This removes you: once it executes, this app can no longer sign for the Safe.
+        </Notice>
       )}
     </Proposal>
   );
@@ -282,10 +268,9 @@ function ChangeThreshold({ status, queue, onClose }: { status: StatusView; queue
         <ThresholdSelect value={next} max={status.signers.length} onChange={setNext} />
       </label>
       {next === 1 && (
-        <div className="note warning">
-          <IconAlert width="15" height="15" />
-          <span>With 1, any single signer controls the Safe, and the app can no longer propose (the executor would sign alone).</span>
-        </div>
+        <Notice tone="warning">
+          With 1, any single signer controls the Safe, and the app can no longer propose (the executor would sign alone).
+        </Notice>
       )}
     </Proposal>
   );

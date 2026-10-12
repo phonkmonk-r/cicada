@@ -118,6 +118,12 @@ export const IconSelector = (p: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
+export const IconChevronRight = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M9 6l6 6-6 6" />
+  </Icon>
+);
+
 export const IconChevronDown = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>
     <path d="M6 9l6 6 6-6" />

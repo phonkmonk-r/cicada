@@ -1,9 +1,8 @@
 import { useState, type ReactNode } from "react";
 
 import { api, type Exposure, type ProposalResult } from "../api";
-import { IconAlert } from "../icons";
 import { sendingLabel, sendLabel } from "../lib/execution";
-import { useSoleSigner } from "../ui";
+import { Notice, ReviewPanel, useSoleSigner } from "../components";
 
 type Replacement = ProposalResult & { slotIds: number[] };
 
@@ -83,19 +82,12 @@ function ReplaceAtNonce({
     <div className="recover">
       <p className="small">{intro}</p>
       {review && (
-        <div className="review-panel">
-          {review.actions.map((action, i) => (
-            <div key={i} className={`tx-action ${action.kind}`}>
-              {action.summary}
-            </div>
-          ))}
-        </div>
+        <ReviewPanel actions={review.actions} />
       )}
       {error && (
-        <div className="note critical">
-          <IconAlert width="15" height="15" />
-          <span>{error}</span>
-        </div>
+        <Notice tone="critical">
+          {error}
+        </Notice>
       )}
       <div className="tx-footer">
         {onCancel && (

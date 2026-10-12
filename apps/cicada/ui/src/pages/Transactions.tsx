@@ -4,7 +4,7 @@ import { api, type DraftView, type Execution, type QueueItem, type StatusView } 
 import { explorer, short } from "../format";
 import { IconAlert, IconCheck, IconCopy, IconExternal, IconInbox, IconPlus } from "../icons";
 import { executionInFlight, executionTone } from "../lib/execution";
-import { Avatar, Badge, PageHeader, useSoleSigner } from "../ui";
+import { Avatar, Badge, Notice, PageHeader, useSoleSigner } from "../components";
 import { NewTransaction } from "./NewTransaction";
 import { QueueCard } from "./QueueCard";
 import { Recover, Reject } from "./Recover";
@@ -230,17 +230,15 @@ function TxCard({
       {detailsOpen && <TxDetails item={item} status={status} />}
 
       {warnings.map((w) => (
-        <div key={w} className="note warning">
-          <IconAlert width="15" height="15" />
-          <span>{w}</span>
-        </div>
+        <Notice key={w} tone="warning">
+          {w}
+        </Notice>
       ))}
 
       {stage.kind === "confirmed" && (
-        <div className="note ok">
-          <IconCheck width="15" height="15" />
-          <span>Confirmation posted.</span>
-        </div>
+        <Notice tone="ok">
+          Confirmation posted.
+        </Notice>
       )}
       {stage.kind === "executing" && <ExecutionStatus execution={stage.execution} chainId={status.chainId} />}
       {stage.kind === "executing" && stage.execution.status === "stuck" && (
@@ -254,10 +252,9 @@ function TxCard({
         </div>
       )}
       {stage.kind === "failed" && (
-        <div className="note critical">
-          <IconAlert width="15" height="15" />
-          <span>{stage.message}</span>
-        </div>
+        <Notice tone="critical">
+          {stage.message}
+        </Notice>
       )}
 
       {rejecting && stage.kind !== "executing" && <Reject nonce={item.nonce} safeTxHash={item.safeTxHash} onProposed={onRefresh} onCancel={() => setRejecting(false)} />}

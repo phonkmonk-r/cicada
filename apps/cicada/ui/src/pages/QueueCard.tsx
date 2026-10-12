@@ -5,7 +5,7 @@ import { api, type DraftView, type ProposalResult, type Simulation } from "../ap
 import { short, signedAmount, UNLIMITED_APPROVAL } from "../format";
 import { IconAlert, IconCheck } from "../icons";
 import { sendingLabel, sendLabel } from "../lib/execution";
-import { Badge, useSoleSigner } from "../ui";
+import { Badge, ErrorNotice, Notice, ReviewPanel, useSoleSigner } from "../components";
 
 /**
  * Actions waiting in the local queue: simulated together as the Safe would run them, then proposed as one transaction,
@@ -143,10 +143,9 @@ export function QueueCard({ draft, pending, onChanged }: { draft: DraftView; pen
                 </span>
               </div>
             ) : (
-              <div className="note ok">
-                <IconCheck width="15" height="15" />
-                <span>All {simulation.calls.length} call(s) succeed</span>
-              </div>
+              <Notice tone="ok">
+                All {simulation.calls.length} call(s) succeed
+              </Notice>
             )}
             {simulation.changes.length > 0 && (
               <dl className="kv">
@@ -169,17 +168,10 @@ export function QueueCard({ draft, pending, onChanged }: { draft: DraftView; pen
       </div>
 
       {review && review.warnings.length > 0 && (
-        <div className="review-panel">
-          {review.warnings.map((warning) => (
-            <div key={warning} className="note warning">
-              <IconAlert width="15" height="15" />
-              <span>{warning}</span>
-            </div>
-          ))}
-        </div>
+        <ReviewPanel warnings={review.warnings} />
       )}
       {blocked && <p className="muted small">{blocked}.</p>}
-      {error && <div className="note critical">{error}</div>}
+      <ErrorNotice error={error} />
 
       <div className="tx-footer">
         <button type="button" disabled={working} onClick={() => void run(() => api.draftClear())}>
