@@ -7,7 +7,7 @@ import type { Address, Hex } from "viem";
 import { foundry } from "viem/chains";
 
 import { plainSafeTx, TxService } from "@rotating-msig/core";
-import { seedSource } from "@rotating-msig/keys";
+import { seedSource, type AddressSource } from "@rotating-msig/keys";
 
 import { SignerSession, type Execution } from "../src/session.js";
 import { fileStore, memoryStore, type SessionStore } from "../src/store.js";
@@ -22,13 +22,13 @@ describe("executions that never land", { skip, timeout: 120_000 }, () => {
   let blackHole: BlackHoleRpc;
   let dataDir: string;
 
-  const session = (slot: number, executionRpcUrl: string, store?: string | SessionStore, txService?: TxService) =>
+  const session = (slot: number, executionRpcUrl: string, store?: string | SessionStore, txService?: TxService, source?: AddressSource) =>
     new SignerSession({
       publicClient: chain.client,
       chain: foundry,
       executionRpcUrl,
       txService: txService ?? new TxService(foundry.id, { baseUrl: service.baseUrl }),
-      source: seedSource(SIGNER_SEEDS[slot]!),
+      source: source ?? seedSource(SIGNER_SEEDS[slot]!),
       tree: chain.trees[slot]!,
       safe: chain.safe,
       multiSendCallOnly: chain.multiSend,
@@ -132,6 +132,31 @@ describe("executions that never land", { skip, timeout: 120_000 }, () => {
       await failing.stop();
       service.drop(hash);
     }
+  });
+
+  it("forgets a signature that failed before leaving the app", async () => {
+    /** A key whose signing fails, as when a Ledger refuses: nothing signed ever leaves the app. */
+    const refusing = (slot: number): AddressSource => {
+      const seed = seedSource(SIGNER_SEEDS[slot]!);
+      const refuse = () => Promise.reject(new Error("signing refused"));
+      return { ...seed, address: seed.address.bind(seed), close: seed.close.bind(seed), signer: async (...args) => ({ ...(await seed.signer(...args)), signTypedData: refuse, signTransaction: refuse }) };
+    };
+    const tx = plainSafeTx({ to: RECIPIENT, value: 1n, data: "0x", operation: 0, nonce: BigInt(await nonce()) });
+    const hash = service.propose(tx);
+    const store = memoryStore();
+    await assert.rejects(session(0, chain.rpc, store, undefined, refusing(0)).confirm(hash), /signing refused/);
+
+    const failing = await startBlackHoleRpc(chain.rpc, { failSends: true });
+    try {
+      await session(2, chain.rpc).confirm(hash);
+      await assert.rejects(session(0, failing.url, store, undefined, refusing(0)).execute(hash), /signing refused/);
+      assert.equal(failing.swallowed(), 0, "nothing reached the RPC");
+    } finally {
+      await failing.stop();
+      service.drop(hash);
+    }
+    assert.deepEqual(JSON.parse(store.read("signing-log.json")!), [], "neither refused signature is recorded");
+    assert.equal((await session(0, chain.rpc, store).status()).exposure, undefined);
   });
 
   it("keeps a damaged signing log aside instead of overwriting it", async () => {

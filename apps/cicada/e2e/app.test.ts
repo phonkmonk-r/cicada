@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -36,18 +36,19 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
   let dapp: Server;
   let dappUrl: string;
 
-  /** Another signer of the same Safe, outside the app. */
-  const signer = (slot: number) =>
+  /** Another signer of the same Safe (or of `safe`, with its trees), outside the app. */
+  const signer = (slot: number, safe = chain.safe, trees = chain.trees) =>
     new SignerSession({
       publicClient: chain.client,
       chain: foundry,
       executionRpcUrl: chain.rpc,
       txService: new TxService(foundry.id, { baseUrl: service.baseUrl }),
       source: seedSource(SIGNER_SEEDS[slot]!),
-      tree: chain.trees[slot]!,
-      safe: chain.safe,
+      tree: trees[slot]!,
+      safe,
       multiSendCallOnly: chain.multiSend,
     });
+  const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`;
 
   before(async () => {
     chain = await startChain(8560, { layout: "branch" });
@@ -116,6 +117,10 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
     await nav("Transactions");
     await page.getByRole("button", { name: "New transaction" }).click();
     await page.getByLabel("Recipient").fill(RECIPIENT);
+    // One wei less than a tenth of a wei: parseUnits would round it, so it is refused.
+    await page.getByLabel(/Amount/).fill("0.0000000000000000001");
+    await page.getByRole("button", { name: "Review" }).click();
+    await page.getByText("Enter at most 18 decimal places").waitFor();
     await page.getByLabel(/Amount/).fill("0.01");
     await page.getByRole("button", { name: "Review" }).click();
     await page.getByRole("button", { name: "Sign & propose" }).click();
@@ -164,6 +169,25 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
         res.end(`<!doctype html><title>Plain page</title><body>A page worth saving.</body>`);
         return;
       }
+      if (req.url === "/hostile") {
+        // An RPC error must not carry the RPC's URL (a custom RPC's API key), and a malformed value must not blank the app.
+        res.end(`<!doctype html><title>Hostile</title><body><script>
+          const rpc = ${JSON.stringify(chain.rpc)};
+          (async () => {
+            const [from] = await window.ethereum.request({ method: "eth_requestAccounts" });
+            const logs = await window.ethereum.request({ method: "eth_getLogs", params: [{ fromBlock: "nonsense" }] }).then(
+              () => "answered",
+              (error) => (String(error.message).includes(rpc) ? "leaked" : "clean"),
+            );
+            const send = await window.ethereum.request({ method: "eth_sendTransaction", params: [{ from, to: "${RECIPIENT}", value: "1.5" }] }).then(
+              () => "sent",
+              (error) => String(error.code),
+            );
+            document.title = "Hostile logs " + logs + " send " + send;
+          })();
+        </script></body>`);
+        return;
+      }
       if (req.url === "/popup") {
         res.end(`<!doctype html><title>Popup</title><body><script>
           document.title = "Popup " + (window.opener ? "with opener" : "without opener") + " " + typeof window.ethereum;
@@ -188,6 +212,15 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
     await page.getByRole("heading", { name: "Wants the Safe to" }).waitFor();
     await page.getByRole("button", { name: "Reject" }).click();
     await page.getByRole("heading", { name: "Wants the Safe to" }).waitFor({ state: "detached" });
+  });
+
+  it("hides the RPC URL from dApps and refuses a malformed value without a review", async () => {
+    const address = page.getByPlaceholder(/Enter a dApp address/);
+    await address.fill(`${dappUrl}hostile`);
+    await address.press("Enter");
+    await page.getByRole("tab", { name: "Hostile logs clean send -32602" }).waitFor();
+    assert.equal(await page.getByRole("heading", { name: "Wants the Safe to" }).count(), 0, "nothing reached review");
+    await page.getByPlaceholder(/Enter a dApp address/).waitFor();
   });
 
   it("opens a page's popup as a tab that keeps its opener and the wallet, and opens and closes tabs", async () => {
@@ -284,6 +317,75 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
     assert.notEqual(after.slots[0]!.owner, before.slots[0]!.owner, "the app's key rotated");
     assert.notEqual(after.slots[1]!.owner, before.slots[1]!.owner, "the chosen slot rotated");
     assert.equal(after.slots[2]!.owner, before.slots[2]!.owner, "nobody else did");
+  });
+
+  it("drops an open review when switching Safe, and keeps a forgotten Safe's signing log for a rejoin", async () => {
+    const first = chain.safe;
+    const second = await chain.deploySafe(1n);
+    // Forgetting a Safe leaves the menu open.
+    const openMenu = async () => {
+      if (!(await page.getByRole("menu").isVisible())) await page.getByTitle("Switch Safe").click();
+    };
+    const switchTo = async (safe: string) => {
+      await openMenu();
+      await page.getByRole("menuitem", { name: short(safe) }).click();
+      await page.getByRole("menu").waitFor({ state: "detached" });
+    };
+    const addSafe = async (safe: string) => {
+      await openMenu();
+      await page.getByRole("button", { name: "Add a Safe" }).click();
+      await page.getByRole("button", { name: /Join a Safe/ }).click();
+      await page.getByLabel("Safe address").fill(safe);
+      await page.getByRole("button", { name: "Continue" }).click();
+      await page.getByTitle("Switch Safe").getByText("2 of 3 signers").waitFor();
+    };
+    await addSafe(second.safe);
+
+    // A review of a transfer from the first Safe (where the app is the only signer, so it would execute at once)...
+    await switchTo(first);
+    await page.getByTitle("Switch Safe").getByText("1 of 3 signers").waitFor();
+    // The sole-signer test left it empty.
+    await chain.client.request({ method: "anvil_setBalance" as never, params: [first, "0xde0b6b3a7640000"] as never });
+    const before = await readSafeState(chain.client, first);
+    await nav("Transactions");
+    await page.getByRole("button", { name: "New transaction" }).click();
+    await page.getByLabel("Recipient").fill(RECIPIENT);
+    await page.getByLabel(/Amount/).fill("0.001");
+    await page.getByRole("button", { name: "Review" }).click();
+    const composer = page.locator(".composer");
+    await composer.getByRole("button", { name: "Execute", exact: true }).waitFor();
+    // ...is gone once the second Safe is shown, so nothing can send it from there.
+    await switchTo(second.safe);
+    await composer.waitFor({ state: "detached" });
+    await page.getByRole("button", { name: "New transaction" }).waitFor();
+    const service2 = new TxService(foundry.id, { baseUrl: service.baseUrl });
+    assert.deepEqual(await service2.pending(second.safe, 0n), [], "nothing was proposed from the second Safe");
+    assert.equal((await readSafeState(chain.client, first)).nonce, before.nonce, "nothing executed from the first");
+
+    // The app confirms a transaction on the second Safe, which is then forgotten, and the transaction replaced.
+    const hash = service.propose(plainSafeTx({ to: RECIPIENT, value: 1n, data: "0x", operation: 0, nonce: 1n }), second.safe);
+    await page.getByRole("button", { name: "Confirm" }).click();
+    await page.getByRole("button", { name: "Sign", exact: true }).click();
+    for (let i = 0; ; i++) {
+      const [pending] = await service2.pending(second.safe, 0n, { fresh: true });
+      if (pending?.confirmations.length === 1) break;
+      if (i > 100) throw new Error("the confirmation never reached the Transaction Service");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    await openMenu();
+    await page.getByRole("button", { name: `Forget ${short(second.safe)}` }).click();
+    await page.getByRole("button", { name: "Forget", exact: true }).click();
+    await page.getByTitle("Switch Safe").getByText("1 of 3 signers").waitFor();
+    const [profile] = readdirSync(join(userData, "profiles"));
+    const log = join(userData, "profiles", profile!, "sessions", `${foundry.id}-${second.safe.toLowerCase()}-slot0`, "signing-log.json");
+    assert.ok(existsSync(log), "forgetting a Safe keeps its signing log");
+    service.drop(hash);
+
+    // Joining again brings the record back: the key that signed is still reported as exposed.
+    await addSafe(second.safe);
+    await nav("Overview");
+    await page.getByText(/Transaction #1 was signed but never went through/).first().waitFor();
+    await page.getByRole("button", { name: "Replace exposed keys" }).waitFor();
   });
 
   it("removes the profile and its files from this computer", async () => {

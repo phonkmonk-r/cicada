@@ -53,6 +53,8 @@ export interface Chain {
   singleton: Address;
   factory: Address;
   trees: TreeFile[];
+  /** Deploys another guarded 2-of-3 Safe for the same three seeds, at a fresh `saltNonce`. */
+  deploySafe(saltNonce: bigint): Promise<{ safe: Address; trees: TreeFile[] }>;
   stop(): void;
 }
 
@@ -90,67 +92,74 @@ export async function startChain(port: number, options: ChainOptions = {}): Prom
   const multiSend = await deploy("MultiSendCallOnly.sol/MultiSendCallOnly.json");
   const guard = await deploy("RotationGuard.sol/RotationGuard.json", pad(multiSend, { size: 32 }));
 
-  const legacy = [0, 1, 2].map((i) => anvilAccount(i));
-  const initializer = encodeFunctionData({ abi: safeAbi, functionName: "setup", args: [legacy.map((a) => a.address), 2n, ZERO, "0x", ZERO, ZERO, 0n, ZERO] });
-  const { result, request } = await client.simulateContract({
-    account: anvilAccount(9),
-    address: factory,
-    abi: artifact("SafeProxyFactory.sol/SafeProxyFactory.json").abi as never,
-    functionName: "createProxyWithNonce",
-    args: [singleton, initializer, 0n],
-  });
-  await client.waitForTransactionReceipt({ hash: await deployer.writeContract(request) });
-  const safe = getAddress(result as Address);
-  await client.waitForTransactionReceipt({ hash: await deployer.sendTransaction({ to: safe, value: parseEther("1") }) });
+  const deploySafe = async (saltNonce: bigint) => {
+    const legacy = [0, 1, 2].map((i) => anvilAccount(i));
+    const initializer = encodeFunctionData({ abi: safeAbi, functionName: "setup", args: [legacy.map((a) => a.address), 2n, ZERO, "0x", ZERO, ZERO, 0n, ZERO] });
+    const { result, request } = await client.simulateContract({
+      account: anvilAccount(9),
+      address: factory,
+      abi: artifact("SafeProxyFactory.sol/SafeProxyFactory.json").abi as never,
+      functionName: "createProxyWithNonce",
+      args: [singleton, initializer, saltNonce],
+    });
+    await client.waitForTransactionReceipt({ hash: await deployer.writeContract(request) });
+    const safe = getAddress(result as Address);
+    await client.waitForTransactionReceipt({ hash: await deployer.sendTransaction({ to: safe, value: parseEther("1") }) });
 
-  const trees: TreeFile[] = [];
-  for (const [slot, seed] of SIGNER_SEEDS.entries()) {
-    const source = seedSource(seed);
-    let tree: TreeFile;
-    if (options.layout === "branch") {
-      const path = safeKeyPath(foundry.id, safe);
-      tree = await generateTree(source, { chainId: foundry.id, safe, slotId: slot, base: path.account, branch: path.branch }, TREE_SIZE);
-      const operator = await source.address(OPERATOR_ACCOUNT);
-      await client.waitForTransactionReceipt({ hash: await deployer.sendTransaction({ to: operator, value: parseEther("1") }) });
-    } else {
-      const addresses: Address[] = [];
-      for (let i = 0; i < TREE_SIZE; i++) addresses.push(await source.address(BASE + i));
-      tree = createTreeFile({ chainId: foundry.id, safe, slotId: slot, base: BASE }, "m/44'/60'/{account}'/0/0", addresses);
+    const trees: TreeFile[] = [];
+    for (const [slot, seed] of SIGNER_SEEDS.entries()) {
+      const source = seedSource(seed);
+      let tree: TreeFile;
+      if (options.layout === "branch") {
+        const path = safeKeyPath(foundry.id, safe);
+        tree = await generateTree(source, { chainId: foundry.id, safe, slotId: slot, base: path.account, branch: path.branch }, TREE_SIZE);
+        if (saltNonce === 0n) {
+          const operator = await source.address(OPERATOR_ACCOUNT);
+          await client.waitForTransactionReceipt({ hash: await deployer.sendTransaction({ to: operator, value: parseEther("1") }) });
+        }
+      } else {
+        const addresses: Address[] = [];
+        for (let i = 0; i < TREE_SIZE; i++) addresses.push(await source.address(BASE + i));
+        tree = createTreeFile({ chainId: foundry.id, safe, slotId: slot, base: BASE }, "m/44'/60'/{account}'/0/0", addresses);
+      }
+      trees.push(tree);
+      for (const address of tree.addresses as Address[]) {
+        await client.waitForTransactionReceipt({ hash: await deployer.sendTransaction({ to: address, value: parseEther("0.05") }) });
+      }
     }
-    trees.push(tree);
-    for (const address of tree.addresses as Address[]) {
-      await client.waitForTransactionReceipt({ hash: await deployer.sendTransaction({ to: address, value: parseEther("0.05") }) });
-    }
-  }
 
-  const loaded = trees.map((file) => loadTreeFile(JSON.stringify(file)));
-  const install = installTx({
-    safe,
-    guard,
-    oldOwners: legacy.map((a) => a.address),
-    configs: loaded.map(({ file, tree }) => slotConfig(tree, file, 0, "")),
-    stage: loaded.map(({ file, tree }) => stageEntries(tree, file, 1, 5)),
-    multiSendCallOnly: multiSend,
-  });
-  const tx = plainSafeTx({ ...install, nonce: 0n });
-  const hash = safeTxHash(foundry.id, safe, tx);
-  const ecdsa = await legacy[1]!.sign({ hash });
-  const executor = legacy[0]!;
-  const pre = concatHex([pad(executor.address, { size: 32 }), pad("0x", { size: 32 }), "0x01"]);
-  const signatures = BigInt(executor.address) < BigInt(legacy[1]!.address) ? concatHex([pre, ecdsa]) : concatHex([ecdsa, pre]);
-  const wallet = createWalletClient({ account: executor, chain: foundry, transport: http(rpc) });
-  const sent = await wallet.writeContract({
-    address: safe,
-    abi: safeAbi,
-    functionName: "execTransaction",
-    args: [tx.to, tx.value, tx.data, tx.operation, tx.safeTxGas, 0n, tx.gasPrice, ZERO, ZERO, signatures],
-  });
-  if ((await client.waitForTransactionReceipt({ hash: sent })).status !== "success") throw new Error("install failed");
+    const loaded = trees.map((file) => loadTreeFile(JSON.stringify(file)));
+    const install = installTx({
+      safe,
+      guard,
+      oldOwners: legacy.map((a) => a.address),
+      configs: loaded.map(({ file, tree }) => slotConfig(tree, file, 0, "")),
+      stage: loaded.map(({ file, tree }) => stageEntries(tree, file, 1, 5)),
+      multiSendCallOnly: multiSend,
+    });
+    const tx = plainSafeTx({ ...install, nonce: 0n });
+    const hash = safeTxHash(foundry.id, safe, tx);
+    const ecdsa = await legacy[1]!.sign({ hash });
+    const executor = legacy[0]!;
+    const pre = concatHex([pad(executor.address, { size: 32 }), pad("0x", { size: 32 }), "0x01"]);
+    const signatures = BigInt(executor.address) < BigInt(legacy[1]!.address) ? concatHex([pre, ecdsa]) : concatHex([ecdsa, pre]);
+    const wallet = createWalletClient({ account: executor, chain: foundry, transport: http(rpc) });
+    const sent = await wallet.writeContract({
+      address: safe,
+      abi: safeAbi,
+      functionName: "execTransaction",
+      args: [tx.to, tx.value, tx.data, tx.operation, tx.safeTxGas, 0n, tx.gasPrice, ZERO, ZERO, signatures],
+    });
+    if ((await client.waitForTransactionReceipt({ hash: sent })).status !== "success") throw new Error("install failed");
+    return { safe, trees };
+  };
+  const { safe, trees } = await deploySafe(0n);
 
-  return { anvil, rpc, client, safe, guard, multiSend, singleton, factory, trees, stop: () => anvil.kill() };
+  return { anvil, rpc, client, safe, guard, multiSend, singleton, factory, trees, deploySafe, stop: () => anvil.kill() };
 }
 
 interface StoredTx {
+  safe: Address;
   tx: SafeTx;
   safeTxHash: Hex;
   confirmations: { owner: Address; signature: Hex; signatureType: "EOA" }[];
@@ -158,13 +167,17 @@ interface StoredTx {
 
 export interface FakeTxService {
   baseUrl: string;
-  propose(tx: SafeTx): Hex;
+  /** Adds a proposal without confirmations, for `safe` (by default the Safe the service was started for). */
+  propose(tx: SafeTx, safe?: Address): Hex;
   /** Removes a proposal, as when it is replaced in Safe{Wallet}. */
   drop(safeTxHash: Hex): void;
   stop(): Promise<void>;
 }
 
-/** In-memory stand-in for the two Safe Transaction Service endpoints the signer uses. Recovers each confirmer like the real service. */
+/**
+ * In-memory stand-in for the two Safe Transaction Service endpoints the signer uses, for any Safe on the chain; `safe`
+ * is the default for `propose`. Recovers each confirmer like the real service.
+ */
 export async function startFakeTxService(safe: Address, chainId: number): Promise<FakeTxService> {
   const store = new Map<string, StoredTx>();
   const server: Server = createServer(async (req, res) => {
@@ -175,12 +188,13 @@ export async function startFakeTxService(safe: Address, chainId: number): Promis
     };
     const list = url.pathname.match(/^\/api\/v1\/safes\/(0x[0-9a-fA-F]{40})\/multisig-transactions\/$/);
     if (req.method === "GET" && list) {
+      const listed = getAddress(list[1]!);
       const fromNonce = BigInt(url.searchParams.get("nonce__gte") ?? "0");
       const results = [...store.values()]
-        .filter((entry) => entry.tx.nonce >= fromNonce)
+        .filter((entry) => entry.safe === listed && entry.tx.nonce >= fromNonce)
         .sort((a, b) => Number(a.tx.nonce - b.tx.nonce))
         .map(({ tx, safeTxHash, confirmations }) => ({
-          safe,
+          safe: listed,
           ...Object.fromEntries(Object.entries(tx).map(([k, v]) => [k, typeof v === "bigint" ? v.toString() : v])),
           safeTxHash,
           confirmations,
@@ -203,11 +217,12 @@ export async function startFakeTxService(safe: Address, chainId: number): Promis
         refundReceiver: getAddress(String(raw.refundReceiver ?? ZERO)),
         nonce: BigInt(String(raw.nonce)),
       };
-      const hash = safeTxHash(chainId, safe, tx);
+      const target = getAddress(list[1]!);
+      const hash = safeTxHash(chainId, target, tx);
       if (hash !== raw.contractTransactionHash) return json(422, { detail: "hash mismatch" });
       const owner = await recoverAddress({ hash, signature: raw.signature as Hex });
       if (owner !== getAddress(String(raw.sender))) return json(422, { detail: "signature is not from sender" });
-      store.set(hash.toLowerCase(), { tx, safeTxHash: hash, confirmations: [{ owner, signature: raw.signature as Hex, signatureType: "EOA" }] });
+      store.set(hash.toLowerCase(), { safe: target, tx, safeTxHash: hash, confirmations: [{ owner, signature: raw.signature as Hex, signatureType: "EOA" }] });
       return json(201, {});
     }
     const confirm = url.pathname.match(/^\/api\/v1\/multisig-transactions\/(0x[0-9a-fA-F]{64})\/confirmations\/$/);
@@ -228,9 +243,9 @@ export async function startFakeTxService(safe: Address, chainId: number): Promis
   const port = typeof address === "object" && address ? address.port : 0;
   return {
     baseUrl: `http://127.0.0.1:${port}`,
-    propose(tx: SafeTx) {
-      const hash = safeTxHash(chainId, safe, tx);
-      store.set(hash.toLowerCase(), { tx, safeTxHash: hash, confirmations: [] });
+    propose(tx: SafeTx, target = safe) {
+      const hash = safeTxHash(chainId, target, tx);
+      store.set(hash.toLowerCase(), { safe: getAddress(target), tx, safeTxHash: hash, confirmations: [] });
       return hash;
     },
     drop(safeTxHash: Hex) {
