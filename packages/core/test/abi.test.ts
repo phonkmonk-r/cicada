@@ -6,7 +6,7 @@ import { multiSendCallOnlyAbi } from "../src/abi/multiSendCallOnly.js";
 import { rotationGuardAbi } from "../src/abi/rotationGuard.js";
 import { safeAbi } from "../src/abi/safe.js";
 
-const OUT = new URL("../../../out/", import.meta.url);
+const OUT = new URL("../../../contracts/out/", import.meta.url);
 
 describe("generated ABIs", { skip: existsSync(OUT) ? false : "run `forge build` first" }, () => {
   for (const [artifact, abi] of [

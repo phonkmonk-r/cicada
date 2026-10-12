@@ -4,8 +4,13 @@ permissions: {}
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   foundry:
@@ -13,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    defaults:
+      run:
+        working-directory: contracts
     steps:
       - uses: actions/checkout@v6
         with:
@@ -35,7 +43,7 @@ jobs:
         run: forge test -vvv
 
   typescript:
-    name: TypeScript packages and signer
+    name: TypeScript packages and Cicada
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,6 +62,7 @@ jobs:
 
       - name: Build contracts
         run: forge build
+        working-directory: contracts
 
       - uses: actions/setup-node@v4
         with:
@@ -92,6 +101,7 @@ jobs:
 
       - name: Build contracts
         run: forge build
+        working-directory: contracts
 
       - uses: actions/setup-node@v4
         with:
@@ -110,7 +120,7 @@ jobs:
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Electron end-to-end tests
-        run: xvfb-run --auto-servernum npm run test:app -w @rotating-msig/signer
+        run: xvfb-run --auto-servernum npm run test:app -w @rotating-msig/cicada
         env:
           E2E_SCREENSHOTS: ${{ runner.temp }}/screenshots
 

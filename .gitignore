@@ -7,9 +7,9 @@ out/
 .ignore/
 
 # Ignores development broadcast logs
-!/broadcast
-/broadcast/*/31337/
-/broadcast/**/dry-run/
+!/contracts/broadcast
+/contracts/broadcast/*/31337/
+/contracts/broadcast/**/dry-run/
 
 # Docs
 docs/
@@ -20,13 +20,15 @@ docs/
 !.env.example
 
 # Demo output
-demo/out/
+contracts/demo/out/
 node_modules/
-/broadcast/Demo.s.sol/
+/contracts/broadcast/Demo.s.sol/
 
 # Sepolia test seed and accounts (testnet only)
 .sepolia/
 .claude/
 .solidity-auditor/
 # Local macOS app bundle the desktop app runs from (scripts/run-desktop.cjs)
-signer/.app/
+apps/cicada/.app/
+
+graphify-out/

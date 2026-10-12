@@ -4,9 +4,8 @@
   "workspaces": [
     "packages/core",
     "packages/keys",
-    "generator",
-    "app",
-    "signer"
+    "packages/generator",
+    "apps/cicada"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",

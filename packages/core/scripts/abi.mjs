@@ -1,7 +1,7 @@
-// Regenerates src/abi/*.ts from Foundry artifacts. Run `forge build` at the repo root first.
+// Regenerates src/abi/*.ts from Foundry artifacts. Run `forge build` in contracts/ first.
 import { readFileSync, writeFileSync } from "node:fs";
 
-const OUT = new URL("../../../out/", import.meta.url);
+const OUT = new URL("../../../contracts/out/", import.meta.url);
 const TARGET = new URL("../src/abi/", import.meta.url);
 
 const ARTIFACTS = [

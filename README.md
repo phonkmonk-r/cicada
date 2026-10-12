@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="signer/desktop/assets/icon.svg" alt="Cicada icon" width="128">
+  <img src="apps/cicada/desktop/assets/icon.svg" alt="Cicada icon" width="128">
 </p>
 
 <h1 align="center">Cicada</h1>
@@ -34,7 +34,7 @@ A key's public key stays hidden until it signs. After that it is public forever.
 - **App.** Cicada reads which key is current from the chain, signs with it, executes when it is your turn, stages your next keys, and funds the signing key with just enough gas, then sweeps the rest back.
 - **Escape hatch.** A transaction that is exactly `setGuard(0)` removes the guard without rotating; its signers' keys count as burned.
 
-[ARCHITECT.md](ARCHITECT.md) covers the contract, packages and app in detail. [PLAN.md](PLAN.md) has the design decisions and what is next.
+[ARCHITECT.md](ARCHITECT.md) covers the contract, packages and app in detail. [PLAN.md](PLAN.md) has the v1 scope, design decisions and progress; [ROADMAP.md](ROADMAP.md) has optional future work.
 
 ## Screenshots
 
@@ -61,26 +61,26 @@ Needs Node 22 and Foundry.
 
 ```sh
 npm install
-forge build
-npm run desktop -w @rotating-msig/signer
+(cd contracts && forge build)
+npm run desktop -w @rotating-msig/cicada
 ```
 
 Add a profile from a seed phrase or a Ledger, then join a Safe by its address or create a new one.
 
 ```sh
-forge test                                   # contract
+(cd contracts && forge test)                 # contract
 npm run typecheck && npm test                # TypeScript, against real contracts on anvil
-npm run test:app -w @rotating-msig/signer    # the desktop app, driven by Playwright
-npm run screenshots -w @rotating-msig/signer # regenerates screenshots/
+npm run test:app -w @rotating-msig/cicada    # the desktop app, driven by Playwright
+npm run screenshots -w @rotating-msig/cicada # regenerates screenshots/
 ```
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `src/RotationGuard.sol` | The guard. Tests in `test/`. |
+| `contracts/` | The Foundry project: the guard in `src/RotationGuard.sol`, tests in `test/`, deploy and demo scripts. |
 | `packages/core` | Shared TypeScript: key lists, rules, proposals, Safe calldata, Transaction Service client. |
 | `packages/keys` | Seed and Ledger key sources and derivation. |
-| `signer` | Cicada: signing session, Electron app, UI, and a command-line server. |
-| `generator` | Command-line key list generator. |
+| `packages/generator` | Command-line key list generator. |
+| `apps/cicada` | Cicada: signing session, Electron app, UI, and a command-line server. |
 | `deployments/` | Sepolia addresses. |
