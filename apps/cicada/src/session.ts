@@ -434,6 +434,8 @@ export class SignerSession {
     try {
       return JSON.parse(raw) as T;
     } catch {
+      // Kept aside, since the next write replaces the damaged file.
+      this.store.write(`${name}.corrupt`, raw);
       return undefined;
     }
   }
@@ -551,14 +553,15 @@ export class SignerSession {
    * of theirs that never landed, or a confirmation whose transaction was replaced. Entries whose key rotated out are
    * forgotten. Keys of transactions still pending are not listed, since the queue already counts them.
    */
-  private exposures(state: SafeState, pending: readonly PendingTx[]): { exposed: Address[]; exposure?: Exposure } {
+  private exposures(state: SafeState, pending: readonly PendingTx[], queueUnknown = false): { exposed: Address[]; exposure?: Exposure } {
     const live = this.signingLog.filter((entry) => entry.chainId === state.chainId && isAddressEqual(entry.safe, state.safe) && isOwner(state, entry.key));
     if (live.length !== this.signingLog.length) {
       this.signingLog = live;
       this.store.write(SIGNING_LOG_FILE, JSON.stringify(live));
     }
     const exposed = [...new Set(live.map((entry) => entry.key))];
-    const stillQueued = (entry: SignedRecord) => entry.role === "confirm" && pending.some((tx) => tx.safeTxHash.toLowerCase() === entry.safeTxHash.toLowerCase());
+    // With the Transaction Service unreachable a confirmation cannot be told lost, so it counts as still queued.
+    const stillQueued = (entry: SignedRecord) => entry.role === "confirm" && (queueUnknown || pending.some((tx) => tx.safeTxHash.toLowerCase() === entry.safeTxHash.toLowerCase()));
     const lost = live.filter((entry) => !stillQueued(entry));
     const first = lost[0];
     if (!first) return { exposed };
@@ -641,7 +644,7 @@ export class SignerSession {
     pending = this.withDirect(state, pending);
     let me: Me | undefined;
     const findings = assess(state, this.options.gasFunding ? { minOwnerGas: 0n } : {});
-    const { exposure } = this.exposures(state, pending);
+    const { exposure } = this.exposures(state, pending, queueError !== undefined);
     if (exposure && !exposure.openAttempt) {
       const slots = exposure.slotIds.map((slotId) => `slot ${slotId}`).join(", ");
       findings.push({

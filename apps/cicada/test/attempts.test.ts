@@ -10,7 +10,7 @@ import { plainSafeTx, TxService } from "@rotating-msig/core";
 import { seedSource } from "@rotating-msig/keys";
 
 import { SignerSession, type Execution } from "../src/session.js";
-import { fileStore } from "../src/store.js";
+import { fileStore, memoryStore, type SessionStore } from "../src/store.js";
 import { hasAnvil, hasArtifacts, SIGNER_SEEDS, startBlackHoleRpc, startChain, startFakeTxService, type BlackHoleRpc, type Chain, type FakeTxService } from "./fixture.js";
 
 const skip = !hasAnvil ? "anvil not installed" : !hasArtifacts ? "run `forge build` first" : false;
@@ -22,18 +22,18 @@ describe("executions that never land", { skip, timeout: 120_000 }, () => {
   let blackHole: BlackHoleRpc;
   let dataDir: string;
 
-  const session = (slot: number, executionRpcUrl: string, store?: string) =>
+  const session = (slot: number, executionRpcUrl: string, store?: string | SessionStore, txService?: TxService) =>
     new SignerSession({
       publicClient: chain.client,
       chain: foundry,
       executionRpcUrl,
-      txService: new TxService(foundry.id, { baseUrl: service.baseUrl }),
+      txService: txService ?? new TxService(foundry.id, { baseUrl: service.baseUrl }),
       source: seedSource(SIGNER_SEEDS[slot]!),
       tree: chain.trees[slot]!,
       safe: chain.safe,
       multiSendCallOnly: chain.multiSend,
       executionTimeoutMs: 300,
-      store: store ? fileStore(store) : undefined,
+      store: typeof store === "string" ? fileStore(store) : store,
     });
 
   async function follow(signer: SignerSession, hash: Hex, until: (record: Execution) => boolean): Promise<Execution> {
@@ -96,6 +96,49 @@ describe("executions that never land", { skip, timeout: 120_000 }, () => {
     assert.equal((await restarted.status()).exposure, undefined, "rotated keys are no longer exposed");
     assert.equal((await restarted.status()).me?.index, 1);
     service.drop(hash);
+  });
+
+  it("keeps a signature in the signing log when sending it fails, and stays quiet while the queue is unreadable", async () => {
+    /** Loses every confirmation it is given, as when the reply times out after the service stored nothing. */
+    class LosingTxService extends TxService {
+      override async confirm(): Promise<void> {
+        throw new Error("Transaction Service timed out");
+      }
+    }
+    const store = memoryStore();
+    const tx = plainSafeTx({ to: RECIPIENT, value: 1n, data: "0x", operation: 0, nonce: BigInt(await nonce()) });
+    const hash = service.propose(tx);
+    await assert.rejects(session(0, chain.rpc, store, new LosingTxService(foundry.id, { baseUrl: service.baseUrl })).confirm(hash), /timed out/);
+    // The transaction is then replaced: the signature that may have left the app belongs to nothing queued.
+    service.drop(hash);
+    const status = await session(0, chain.rpc, store).status();
+    assert.deepEqual(status.exposure?.slotIds, [0], "the signature may have left the app, so the key counts as exposed");
+    assert.match(status.findings.map((finding) => finding.message).join(), /never went through/);
+
+    const unreachable = await session(0, chain.rpc, store, new TxService(foundry.id, { baseUrl: "http://127.0.0.1:1" })).status();
+    assert.ok(unreachable.queueError);
+    assert.equal(unreachable.exposure, undefined, "a confirmation cannot be told lost while the queue is unreadable");
+    assert.doesNotMatch(unreachable.findings.map((finding) => finding.message).join(), /never went through/);
+
+    const failing = await startBlackHoleRpc(chain.rpc, { failSends: true });
+    try {
+      service.propose(tx);
+      await session(0, chain.rpc).confirm(hash);
+      const executorStore = memoryStore();
+      await assert.rejects(session(1, failing.url, executorStore).execute(hash), /timed out/);
+      assert.equal(failing.swallowed(), 1, "the signed transaction reached the RPC");
+      assert.ok((await session(1, chain.rpc, executorStore).status()).exposure?.slotIds.includes(1), "a failed send still exposes the executor");
+    } finally {
+      await failing.stop();
+      service.drop(hash);
+    }
+  });
+
+  it("keeps a damaged signing log aside instead of overwriting it", async () => {
+    const store = memoryStore();
+    store.write("signing-log.json", "[{");
+    await session(0, chain.rpc, store).status();
+    assert.equal(store.read("signing-log.json.corrupt"), "[{");
   });
 
   it("replaces the exposed keys at the same nonce when the execution is abandoned", async () => {

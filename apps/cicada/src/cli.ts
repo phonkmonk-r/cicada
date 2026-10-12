@@ -17,7 +17,7 @@ export const DEFAULT_PORT = 7373;
 const USAGE = `rotation-signer: confirm and execute Safe transactions with your current rotation key
 
   rotation-signer --tree <file> --rpc <url> [--mnemonic-file <file> [--passphrase] | --ledger]
-                  [--execution-rpc <url>] [--port ${DEFAULT_PORT}]
+                  [--execution-rpc <url>] [--port ${DEFAULT_PORT}] [--data-dir <dir>]
 
   --tree           your tree file; it names the Safe, the chain and your slot
   --rpc            RPC used to read the chain (also read from RPC_URL)
@@ -25,6 +25,7 @@ const USAGE = `rotation-signer: confirm and execute Safe transactions with your 
   --mnemonic-file  your seed phrase file; without it (and without --ledger) the seed is asked for, hidden
   --ledger         sign on a Ledger instead of a seed
   --port           local port for the UI (127.0.0.1 only)
+  --data-dir       where the signing log and open executions are kept across restarts; defaults to <tree>.session
 
 The UI opens at the printed URL. It contains a session token: do not share it. SAFE_API_KEY, if set, is sent to the
 Safe Transaction Service.`;
@@ -37,6 +38,7 @@ const OPTIONS = {
   passphrase: { type: "boolean" },
   ledger: { type: "boolean" },
   port: { type: "string" },
+  "data-dir": { type: "string" },
   help: { type: "boolean" },
 } as const;
 
@@ -46,6 +48,7 @@ export interface CliConfig {
   rpc: string;
   executionRpc: string;
   port: number;
+  dataDir: string;
   key: { kind: "ledger" } | { kind: "seed"; mnemonicFile?: string; passphrase: boolean };
 }
 
@@ -69,6 +72,7 @@ export function parseConfig(argv: string[], env: NodeJS.ProcessEnv = process.env
     rpc,
     executionRpc,
     port,
+    dataDir: values["data-dir"] ?? `${values.tree}.session`,
     key: values.ledger ? { kind: "ledger" } : { kind: "seed", mnemonicFile: values["mnemonic-file"], passphrase: values.passphrase ?? false },
   };
 }
@@ -95,7 +99,7 @@ export async function main(argv: string[]): Promise<number> {
 
   const source = await openSource(config.key);
   const { session } = createSession(
-    { tree: config.tree, rpc: config.rpc, executionRpc: config.executionRpc, safeApiKey: process.env.SAFE_API_KEY },
+    { tree: config.tree, rpc: config.rpc, executionRpc: config.executionRpc, safeApiKey: process.env.SAFE_API_KEY, dataDir: config.dataDir },
     source,
   );
 

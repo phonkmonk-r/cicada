@@ -1,6 +1,7 @@
-import { encodeFunctionData, isAddress, isHex, parseAbi, parseEther, type AbiFunction, type AbiParameter } from "viem";
+import { encodeFunctionData, isAddress, isHex, parseAbi, type AbiFunction, type AbiParameter } from "viem";
 
 import type { DappCall } from "../api";
+import { parseAmount } from "./amount";
 
 /** Functions that change state, from an ABI pasted as JSON or as one human-readable signature per line. */
 export function parseFunctions(text: string): AbiFunction[] {
@@ -50,7 +51,7 @@ export function coerce(param: AbiParameter, value: unknown): unknown {
     return text;
   }
   if (type.startsWith("bytes")) {
-    if (!isHex(text)) throw new Error(`${label}: enter 0x-prefixed hex`);
+    if (!isHex(text) || text.length % 2 !== 0) throw new Error(`${label}: enter even-length 0x-prefixed hex`);
     return text;
   }
   return text;
@@ -74,7 +75,11 @@ export function buildContractCall(form: ContractCallForm): { call?: DappCall; pr
   let wei = 0n;
   if (form.value.trim()) {
     if (!/^\d*\.?\d+$/.test(form.value.trim())) return { problem: "Enter the ETH value as a number" };
-    wei = parseEther(form.value.trim());
+    try {
+      wei = parseAmount(form.value, 18);
+    } catch (error) {
+      return { problem: (error as Error).message };
+    }
   }
   let data: `0x${string}`;
   if (form.mode === "raw") {

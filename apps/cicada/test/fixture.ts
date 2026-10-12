@@ -246,8 +246,11 @@ export interface BlackHoleRpc {
   stop(): Promise<void>;
 }
 
-/** An RPC that answers like a private relay but never forwards raw transactions: what Flashbots Protect did on Sepolia. */
-export async function startBlackHoleRpc(upstream: string): Promise<BlackHoleRpc> {
+/**
+ * An RPC that answers like a private relay but never forwards raw transactions: what Flashbots Protect did on Sepolia.
+ * With `failSends` it answers them with an error instead, as when the relay accepted it but the reply was lost.
+ */
+export async function startBlackHoleRpc(upstream: string, options: { failSends?: boolean } = {}): Promise<BlackHoleRpc> {
   let swallowed = 0;
   const server: Server = createServer(async (req, res) => {
     let body = "";
@@ -256,7 +259,8 @@ export async function startBlackHoleRpc(upstream: string): Promise<BlackHoleRpc>
     res.writeHead(200, { "content-type": "application/json" });
     if (call.method === "eth_sendRawTransaction") {
       swallowed++;
-      res.end(JSON.stringify({ jsonrpc: "2.0", id: call.id, result: keccak256(call.params[0] as Hex) }));
+      if (options.failSends) res.end(JSON.stringify({ jsonrpc: "2.0", id: call.id, error: { code: -32603, message: "upstream timed out" } }));
+      else res.end(JSON.stringify({ jsonrpc: "2.0", id: call.id, result: keccak256(call.params[0] as Hex) }));
       return;
     }
     const forwarded = await fetch(upstream, { method: "POST", headers: { "content-type": "application/json" }, body });

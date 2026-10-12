@@ -19,7 +19,8 @@ function treeFile(chainId: number): string {
 
 describe("parseConfig", () => {
   it("derives chain and Safe from the tree; executes through Flashbots Protect on mainnet, the read RPC on Sepolia", () => {
-    const config = parseConfig(["--tree", treeFile(SEPOLIA_CHAIN_ID), "--rpc", "http://rpc"], {});
+    const sepoliaTree = treeFile(SEPOLIA_CHAIN_ID);
+    const config = parseConfig(["--tree", sepoliaTree, "--rpc", "http://rpc"], {});
     assert.ok(config !== "help");
     assert.equal(config.chain.id, SEPOLIA_CHAIN_ID);
     assert.equal(config.executionRpc, "http://rpc");
@@ -27,6 +28,7 @@ describe("parseConfig", () => {
     assert.ok(mainnetConfig !== "help");
     assert.equal(mainnetConfig.executionRpc, DEFAULT_EXECUTION_RPC[1]);
     assert.equal(config.port, DEFAULT_PORT);
+    assert.equal(config.dataDir, `${sepoliaTree}.session`, "the signing log survives a restart by default");
     assert.deepEqual(config.key, { kind: "seed", mnemonicFile: undefined, passphrase: false });
   });
 

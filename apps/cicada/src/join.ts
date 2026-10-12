@@ -78,12 +78,16 @@ export interface JoinResult {
   tree: TreeFile;
 }
 
-/** Finds the networks (among mainnet and Sepolia) where `safe` is a deployed contract. */
+/**
+ * Finds the networks (among mainnet and Sepolia) where `safe` is a deployed contract. A custom `rpc` is used only for
+ * the chain it serves; the others are read through their default RPCs.
+ */
 export async function detectChains(safe: Address, rpc?: string): Promise<number[]> {
+  const rpcChain = rpc ? await createPublicClient({ transport: http(rpc) }).getChainId().catch(() => undefined) : undefined;
   const found = await Promise.all(
     Object.keys(DEFAULT_RPCS).map(async (id) => {
       try {
-        const code = await readClient(Number(id), rpc).getCode({ address: safe });
+        const code = await readClient(Number(id), rpcChain === Number(id) ? rpc : undefined).getCode({ address: safe });
         return code && code !== "0x" ? Number(id) : undefined;
       } catch {
         return undefined;
@@ -111,6 +115,10 @@ export async function joinSafe(options: JoinOptions): Promise<JoinResult> {
     chainId = chains[0]!;
   }
   const client = options.client ?? readClient(chainId, options.rpc);
+  if (options.rpc && !options.client) {
+    const served = await client.getChainId();
+    if (served !== chainId) throw new Error(`the RPC set under Advanced serves chain ${served}, not ${chainFor(chainId).name}`);
+  }
 
   progress({ stage: "reading" });
   const state = await readSafeState(client, safe).catch(() => {

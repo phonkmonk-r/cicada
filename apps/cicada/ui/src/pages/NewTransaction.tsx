@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { formatUnits, isAddress, parseEther, parseUnits } from "viem";
+import { formatUnits, isAddress } from "viem";
 
 import { api, type DappCall, type ProposalInput, type ProposalResult, type StatusView, type TokenInfo } from "../api";
 import { eth } from "../format";
 import { IconAlert, IconCheck } from "../icons";
+import { parseAmount } from "../lib/amount";
 import { sendingLabel, sendLabel } from "../lib/execution";
 import { Avatar, Badge, Dots, useSoleSigner } from "../ui";
 import { ContractCall } from "./ContractCall";
@@ -66,10 +67,9 @@ export function NewTransaction({
       return { kind: "calls", origin: "app", calls: [custom.call] };
     }
     if (!isAddress(to, { strict: false })) throw new Error("Enter a valid recipient address");
-    if (!/^\d*\.?\d+$/.test(amount.trim())) throw new Error("Enter an amount");
-    if (tab === "eth") return { kind: "eth", to, amount: parseEther(amount.trim()).toString() };
+    if (tab === "eth") return { kind: "eth", to, amount: parseAmount(amount, 18).toString() };
     if (!token) throw new Error("Enter a token address");
-    return { kind: "erc20", token: token.address, to, amount: parseUnits(amount.trim(), token.decimals).toString() };
+    return { kind: "erc20", token: token.address, to, amount: parseAmount(amount, token.decimals).toString() };
   }
 
   async function submit(preview: boolean) {

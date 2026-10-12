@@ -26,6 +26,7 @@ import { detectChains, JoinError, joinSafe, readClient, type JoinProgress } from
 import { chainFor, registerLocalChain } from "../src/networks.js";
 import { createSafe, planSafe, prepareNewSlot, prepareSlot, type NewSafeContext } from "../src/newsafe.js";
 import type { SignerSession } from "../src/session.js";
+import { writeFileAtomic } from "../src/store.js";
 import { browsableUrl, clearDappStorage, DappBrowser, isCloseShortcut, type Bookmark, type Bounds } from "./browser.js";
 import { ProfileStore, type ProfileEntry } from "./profiles.js";
 import { readVault, unlockVault } from "./vault.js";
@@ -149,7 +150,7 @@ function readSettings(dir = activeId ? profileDir() : undefined): ProfileSetting
 
 function writeSettings(settings: ProfileSettings) {
   mkdirSync(dirname(settingsPath()), { recursive: true });
-  writeFileSync(settingsPath(), JSON.stringify(settings, null, 2));
+  writeFileAtomic(settingsPath(), JSON.stringify(settings, null, 2));
 }
 
 /** The Safe the app shows, from saved settings. */
@@ -185,6 +186,7 @@ function stopSafe(key: string) {
 /** Starts a Safe's session with the unlocked wallet, and proves it works by resolving the current owner key. */
 async function start(entry: SafeEntry): Promise<void> {
   if (!source) throw new Error("unlock your wallet first");
+  const unlocked = source;
   const key = safeKey(entry);
   stopSafe(key);
   const tree = loadTreeFile(readFileSync(treePath(entry), "utf8")).file;
@@ -199,14 +201,17 @@ async function start(entry: SafeEntry): Promise<void> {
       dataDir: sessionDir(entry),
       // A renewal executed: the new list becomes the slot's tree, and the saved candidate is no longer needed.
       onTreeChange: (renewed) => {
-        writeFileSync(treePath(entry), JSON.stringify(renewed));
+        writeFileAtomic(treePath(entry), JSON.stringify(renewed));
         rmSync(renewedTreePath(entry, renewed.root), { force: true });
       },
     },
-    source,
+    unlocked,
   );
   const status = await next.status();
+  if (source !== unlocked) throw new Error("the wallet was locked while this Safe was starting");
   if (!status.me) throw new Error(status.meError ?? "your current owner key could not be resolved");
+  // Another start of this Safe may have finished during the await.
+  stopSafe(key);
   running.set(key, { session: next, stopAutoRefill: next.startAutoRefill() });
   safeErrors.delete(key);
   if (activeKey === key) session = next;
@@ -281,7 +286,7 @@ async function joinWith(safe: string, advanced: Advanced, sendProgress: (progres
   const previous = settings.safes.find((candidate) => safeKey(candidate) === key);
   if (previous?.txServiceUrl) entry.txServiceUrl = previous.txServiceUrl;
   mkdirSync(dirname(treePath(entry)), { recursive: true });
-  writeFileSync(treePath(entry), JSON.stringify(joined.tree));
+  writeFileAtomic(treePath(entry), JSON.stringify(joined.tree));
   await start(entry);
   writeSettings({ safes: [...settings.safes.filter((candidate) => safeKey(candidate) !== key), entry], active: key });
   browser?.close();
@@ -316,7 +321,7 @@ function writeCreating(creating: Creating | undefined) {
     return;
   }
   mkdirSync(dirname(creatingPath()), { recursive: true });
-  writeFileSync(creatingPath(), JSON.stringify(creating, null, 2));
+  writeFileAtomic(creatingPath(), JSON.stringify(creating, null, 2));
 }
 
 function operator(): string | undefined {
@@ -324,7 +329,8 @@ function operator(): string | undefined {
 }
 
 function newSafeContext(chainId: number): NewSafeContext {
-  return { client: readClient(chainId, activeEntry()?.rpc), chain: chainFor(chainId) };
+  const entry = activeEntry();
+  return { client: readClient(chainId, entry?.chainId === chainId ? entry.rpc : undefined), chain: chainFor(chainId) };
 }
 
 /** What the setup screens show about a Safe being created. */
@@ -353,7 +359,7 @@ async function prepareMySlot(invite: SafeInvite): Promise<SlotPackage> {
   );
   const path = treePath({ chainId: tree.chainId, safe: tree.safe, slotId: tree.slotId });
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(tree));
+  writeFileAtomic(path, JSON.stringify(tree));
   return pkg;
 }
 
@@ -465,14 +471,15 @@ handle("adding:prepare", async (safe: unknown) => {
   if (!/^0x[0-9a-fA-F]{40}$/.test(address)) throw new Error("that is not a Safe address");
   const chains = await detectChains(address as `0x${string}`, activeEntry()?.rpc);
   if (chains.length === 0) throw new Error("no Safe at this address on Ethereum or Sepolia");
+  if (chains.length > 1) throw new Error("this address exists on both Ethereum and Sepolia, so the network is ambiguous");
   const chainId = chains[0]!;
   const { tree, package: pkg } = await prepareNewSlot(newSafeContext(chainId), source, address as `0x${string}`, (done, total) =>
     sendToWindow("app:progress", { stage: "deriving", done, total }),
   );
   const path = treePath({ chainId, safe: tree.safe, slotId: tree.slotId });
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(tree));
-  writeFileSync(addingPath(), JSON.stringify({ chainId, safe: tree.safe, package: pkg } satisfies Adding, null, 2));
+  writeFileAtomic(path, JSON.stringify(tree));
+  writeFileAtomic(addingPath(), JSON.stringify({ chainId, safe: tree.safe, package: pkg } satisfies Adding, null, 2));
   return true;
 });
 
@@ -678,13 +685,14 @@ handle("safes:select", async (key: unknown) => {
   return true;
 });
 
-/** Forgets a Safe in this profile (its tree file stays, so joining again is quick). Nothing changes on-chain. */
+/**
+ * Forgets a Safe in this profile. Its tree file stays, so joining again is quick, and so does its session folder: the
+ * signing log must survive a rejoin, or forgetting a Safe would hide an exposed key. Nothing changes on-chain.
+ */
 handle("safes:remove", (key: unknown) => {
   const settings = readSettings();
   if (!settings) return true;
   stopSafe(String(key));
-  const removed = settings.safes.find((candidate) => safeKey(candidate) === key);
-  if (removed) rmSync(sessionDir(removed), { recursive: true, force: true });
   const safes = settings.safes.filter((candidate) => safeKey(candidate) !== key);
   if (activeKey === key) {
     browser?.close();
@@ -709,7 +717,7 @@ handle("signer:renewKeys", async () => {
   const entry = activeEntry();
   if (!entry) throw new Error("no Safe is shown");
   const { input, tree } = await requireSession().renewKeys((done, total) => sendToWindow("app:progress", { stage: "deriving", done, total }));
-  writeFileSync(renewedTreePath(entry, tree.root), JSON.stringify(tree));
+  writeFileAtomic(renewedTreePath(entry, tree.root), JSON.stringify(tree));
   return input;
 });
 handle("signer:token", (address: unknown) => requireSession().tokenInfo(String(address)));
@@ -740,7 +748,7 @@ function readBookmarks(): Bookmark[] {
 
 function writeBookmarks(list: Bookmark[]): Bookmark[] {
   mkdirSync(dirname(bookmarksPath()), { recursive: true });
-  writeFileSync(bookmarksPath(), JSON.stringify(list, null, 2));
+  writeFileAtomic(bookmarksPath(), JSON.stringify(list, null, 2));
   sendToWindow("bookmarks:state", list);
   return list;
 }

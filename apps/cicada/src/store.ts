@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, writeSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 
 /** Where a session keeps the small files that must survive a restart: its signing log and open executions. */
 export interface SessionStore {
@@ -7,7 +7,7 @@ export interface SessionStore {
   write(name: string, data: string): void;
 }
 
-/** Files under `dir`, written atomically (temporary file, then rename). */
+/** Files under `dir`, written atomically (temporary file flushed to disk, then rename). */
 export function fileStore(dir: string): SessionStore {
   return {
     read(name) {
@@ -17,10 +17,22 @@ export function fileStore(dir: string): SessionStore {
     write(name, data) {
       mkdirSync(dir, { recursive: true });
       const temporary = join(dir, `${name}.tmp`);
-      writeFileSync(temporary, data);
+      const fd = openSync(temporary, "w");
+      try {
+        writeSync(fd, data);
+        // Without it a power loss can leave the rename on disk ahead of the data, and the file reads back empty.
+        fsyncSync(fd);
+      } finally {
+        closeSync(fd);
+      }
       renameSync(temporary, join(dir, name));
     },
   };
+}
+
+/** Writes `data` to `path` atomically, creating its folder. */
+export function writeFileAtomic(path: string, data: string): void {
+  fileStore(dirname(path)).write(basename(path), data);
 }
 
 /** Keeps everything in memory: the command-line server and tests. */

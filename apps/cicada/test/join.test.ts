@@ -72,5 +72,10 @@ describe("joining a Safe from a seed alone", { skip }, () => {
       joinSafe({ source: seedSource(OUTSIDER), safe: "0x1234", chainId: foundry.id, client: chain.client }),
       (error: unknown) => error instanceof JoinError && error.kind === "invalid-address",
     );
+    await assert.rejects(
+      joinSafe({ source: seedSource(SIGNER_SEEDS[0]!), safe: chain.safe, chainId: 1, rpc: chain.rpc, bases: [BASE] }),
+      /serves chain 31337, not Ethereum/,
+      "a custom RPC for another chain is refused instead of deriving keys for the wrong network",
+    );
   });
 });

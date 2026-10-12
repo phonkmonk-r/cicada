@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { formatEther } from "viem";
 
 import { desktop, type AddingView, type CreateStage, type CreatingView, type DesktopState, type JoinProgress } from "./api";
@@ -443,7 +443,11 @@ function SignerRoom({ view, onChange, onDone }: { view: CreatingView; onChange: 
   const [checking, setChecking] = useState(false);
   const { percent, progress } = useDeriving();
 
+  // One check at a time: on a Ledger two overlapping derivations make one fail.
+  const running = useRef(false);
   const check = useCallback(async () => {
+    if (running.current) return;
+    running.current = true;
     setChecking(true);
     setError(undefined);
     try {
@@ -451,6 +455,7 @@ function SignerRoom({ view, onChange, onDone }: { view: CreatingView; onChange: 
     } catch (caught) {
       setError((caught as Error).message);
     } finally {
+      running.current = false;
       setChecking(false);
     }
   }, [onDone]);
@@ -538,7 +543,11 @@ function AddedRoom({ view, signer, onChange, onDone }: { view: AddingView; signe
   const [checking, setChecking] = useState(false);
   const { percent, progress } = useDeriving();
 
+  // One check at a time: on a Ledger two overlapping derivations make one fail.
+  const running = useRef(false);
   const check = useCallback(async () => {
+    if (running.current) return;
+    running.current = true;
     setChecking(true);
     setError(undefined);
     try {
@@ -546,6 +555,7 @@ function AddedRoom({ view, signer, onChange, onDone }: { view: AddingView; signe
     } catch (caught) {
       setError((caught as Error).message);
     } finally {
+      running.current = false;
       setChecking(false);
     }
   }, [onDone]);

@@ -57,6 +57,7 @@ describe("coerce", () => {
     assert.throws(() => coerce(param("address"), "0x1234"), /not an address/);
     assert.equal(coerce(param("bytes32"), "0xab"), "0xab");
     assert.throws(() => coerce(param("bytes"), "ab"), /0x-prefixed hex/);
+    assert.throws(() => coerce(param("bytes"), "0x123"), /even-length/);
     assert.equal(coerce(param("string"), " hi "), "hi");
   });
 
