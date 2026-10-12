@@ -1,0 +1,14 @@
+.env
+.env.*
+.sepolia/
+lib/
+screenshots/
+node_modules/
+out/
+cache/
+.solidity-auditor/
+.claude/
+graphify-out/
+broadcast/
+test/RotationGuard.poc.t.sol
+signer/scripts/_*.ts
