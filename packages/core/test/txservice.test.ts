@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { recoverAddress, type Hex } from "viem";
+import { concatHex, hexToNumber, numberToHex, recoverAddress, sliceHex, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 import { SEPOLIA_CHAIN_ID } from "../src/addresses.js";
 import { packSignatures, preValidatedSignature, safeTxHash } from "../src/safetx.js";
@@ -43,6 +44,37 @@ describe("Transaction Service client, against real Sepolia data", () => {
     const tampered = FIXTURE.replace('"value": "100000000000000"', '"value": "100000000000001"');
     const service = new TxService(SEPOLIA_CHAIN_ID, { fetch: fakeFetch(tampered) });
     await assert.rejects(service.pending(SAFE, 0n), /but its fields hash to/);
+  });
+
+  it("drops a confirmation whose signature is not from its listed owner, and keeps a genuine eth_sign one", async () => {
+    const body = JSON.parse(FIXTURE) as { results: { nonce: number | string; safeTxHash: Hex; confirmations: { owner: string; signature: Hex; signatureType: string }[] }[] };
+    const raw = body.results.find((t) => BigInt(t.nonce) === 1n)!;
+    const forged = raw.confirmations.find((c) => c.signatureType === "EOA")!;
+    forged.owner = "0x000000000000000000000000000000000000dEaD";
+    const signer = privateKeyToAccount("0x0123456789012345678901234567890123456789012345678901234567890123");
+    const signed = await signer.signMessage({ message: { raw: raw.safeTxHash } });
+    const ethSign = concatHex([sliceHex(signed, 0, 64), numberToHex(hexToNumber(sliceHex(signed, 64)) + 4, { size: 1 })]);
+    raw.confirmations.push({ owner: signer.address, signature: ethSign, signatureType: "ETH_SIGN" });
+
+    const service = new TxService(SEPOLIA_CHAIN_ID, { fetch: fakeFetch(JSON.stringify(body)) });
+    const transfer = (await service.pending(SAFE, 0n)).find((t) => t.tx.nonce === 1n)!;
+    assert.deepEqual(
+      transfer.confirmations.map((c) => c.signatureType),
+      ["APPROVED_HASH", "ETH_SIGN"],
+      "the forged EOA confirmation is gone; pre-validated ones are not signature-checked",
+    );
+    assert.equal(transfer.confirmations[1]!.owner, signer.address);
+  });
+
+  it("gives every request a timeout and names a stalled service", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    await new TxService(SEPOLIA_CHAIN_ID, { fetch: fakeFetch(FIXTURE, 200, calls) }).pending(SAFE, 0n);
+    assert.ok(calls[0]!.init?.signal instanceof AbortSignal);
+
+    const stalled = (async () => {
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    }) as unknown as typeof fetch;
+    await assert.rejects(new TxService(SEPOLIA_CHAIN_ID, { fetch: stalled }).pending(SAFE, 0n), /did not answer within 15 s/);
   });
 
   it("fetches pending transactions once for concurrent callers and reuses them briefly, unless asked fresh", async () => {

@@ -1,4 +1,4 @@
-import { getAddress, type Address, type Hex } from "viem";
+import { concatHex, getAddress, hexToNumber, isAddressEqual, numberToHex, recoverAddress, recoverMessageAddress, size, sliceHex, type Address, type Hex } from "viem";
 
 import { SEPOLIA_CHAIN_ID } from "./addresses.js";
 import { safeTxHash, type SafeTx } from "./safetx.js";
@@ -68,9 +68,31 @@ interface ServiceTx {
 const DEFAULT_PENDING_CACHE_MS = 3_000;
 /** Attempts for a request the service rate-limits (429), waiting `Retry-After` or a growing delay between them. */
 const RATE_LIMIT_ATTEMPTS = 4;
+/** How long one request may take before it is abandoned, so a stalled service never freezes refreshes or actions. */
+const REQUEST_TIMEOUT_MS = 15_000;
 
 /**
- * Minimal client for the Safe Transaction Service. Every transaction's hash is recomputed locally on read. Pending
+ * Whether an ECDSA or eth_sign confirmation was really made by its owner over `hash`, decoded the way Safe's
+ * `checkNSignatures` does (eth_sign: v > 30, over the prefixed hash, with v - 4). Other kinds are not checked here.
+ */
+async function signedBy(hash: Hex, confirmation: Confirmation): Promise<boolean> {
+  if (confirmation.signatureType !== "EOA" && confirmation.signatureType !== "ETH_SIGN") return true;
+  try {
+    if (size(confirmation.signature) !== 65) return false;
+    const v = hexToNumber(sliceHex(confirmation.signature, 64));
+    const signer =
+      v > 30
+        ? await recoverMessageAddress({ message: { raw: hash }, signature: concatHex([sliceHex(confirmation.signature, 0, 64), numberToHex(v - 4, { size: 1 })]) })
+        : await recoverAddress({ hash, signature: confirmation.signature });
+    return isAddressEqual(signer, confirmation.owner);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Minimal client for the Safe Transaction Service. Every transaction's hash is recomputed locally on read, and a
+ * confirmation whose signature was not made by its listed owner over that hash is dropped. Pending
  * transactions are fetched once for concurrent callers and reused for a few seconds (cleared by this client's own
  * proposals and confirmations), and rate-limited requests are retried, since the public API allows only a few
  * requests per second without an API key.
@@ -111,7 +133,7 @@ export class TxService {
   private async fetchPending(safe: Address, fromNonce: bigint): Promise<PendingTx[]> {
     const url = `${this.baseUrl}/api/v1/safes/${getAddress(safe)}/multisig-transactions/?executed=false&nonce__gte=${fromNonce}&ordering=nonce&limit=50`;
     const body = (await this.request(url)) as { results: ServiceTx[] };
-    return body.results.map((raw) => this.parse(safe, raw));
+    return Promise.all(body.results.map((raw) => this.parse(safe, raw)));
   }
 
   /**
@@ -152,7 +174,7 @@ export class TxService {
     this.pendingCache.clear();
   }
 
-  private parse(safe: Address, raw: ServiceTx): PendingTx {
+  private async parse(safe: Address, raw: ServiceTx): Promise<PendingTx> {
     const tx: SafeTx = {
       to: getAddress(raw.to),
       value: BigInt(raw.value),
@@ -169,10 +191,12 @@ export class TxService {
     if (hash.toLowerCase() !== raw.safeTxHash.toLowerCase()) {
       throw new Error(`Transaction Service returned nonce ${tx.nonce} with hash ${raw.safeTxHash}, but its fields hash to ${hash}`);
     }
+    const listed: Confirmation[] = (raw.confirmations ?? []).map((c) => ({ owner: getAddress(c.owner), signature: c.signature as Hex, signatureType: c.signatureType }));
+    const genuine = await Promise.all(listed.map((c) => signedBy(hash, c)));
     return {
       safeTxHash: hash,
       tx,
-      confirmations: (raw.confirmations ?? []).map((c) => ({ owner: getAddress(c.owner), signature: c.signature as Hex, signatureType: c.signatureType })),
+      confirmations: listed.filter((_, i) => genuine[i]),
       proposer: raw.proposer ? getAddress(raw.proposer) : undefined,
       submissionDate: raw.submissionDate,
     };
@@ -183,7 +207,13 @@ export class TxService {
     if (init.body) headers["content-type"] = "application/json";
     if (this.apiKey) headers.authorization = `Bearer ${this.apiKey}`;
     for (let attempt = 1; ; attempt++) {
-      const response = await this.fetchImpl(url, { ...init, headers });
+      let response: Response;
+      try {
+        response = await this.fetchImpl(url, { ...init, headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      } catch (error) {
+        if ((error as Error).name === "TimeoutError") throw new Error(`Transaction Service did not answer within ${REQUEST_TIMEOUT_MS / 1000} s`);
+        throw error;
+      }
       const text = await response.text();
       // A 429 is rejected before the service does anything, so retrying a POST cannot record it twice.
       if (response.status === 429 && attempt < RATE_LIMIT_ATTEMPTS) {
