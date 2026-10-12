@@ -32,3 +32,6 @@ node_modules/
 apps/cicada/.app/
 
 graphify-out/
+.agents/
+skills-lock.json
+.goose/
