@@ -111,6 +111,13 @@ export const IconStar = (p: SVGProps<SVGSVGElement>) => (
   </Icon>
 );
 
+/** Up and down chevrons: a control that opens a list to choose from. */
+export const IconSelector = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
+  </Icon>
+);
+
 export const IconChevronDown = (p: SVGProps<SVGSVGElement>) => (
   <Icon {...p}>
     <path d="M6 9l6 6 6-6" />

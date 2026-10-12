@@ -136,6 +136,16 @@ p {
   text-align: center;
 }
 
+/* Read by screen readers, not shown. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .ok-text {
   color: var(--accent);
 }
@@ -872,73 +882,72 @@ button.large {
   padding: 0 var(--space-6);
 }
 
+/* The Safe card: who you are signing for. Address on top, network and threshold underneath. */
 .safe-chip {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: var(--space-10);
+  display: flex;
   align-items: center;
-  padding: var(--space-10);
+  gap: var(--space-10);
+  padding: var(--space-8) var(--space-10);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .safe-chip .avatar {
-  grid-row: span 2;
+  flex: none;
 }
 
-.safe-chip-name {
-  font-weight: 600;
-  font-size: var(--text-md);
-}
-
-.safe-chip-badges {
-  grid-column: 2;
+.safe-chip-text {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-6);
-  margin-top: var(--space-6);
-  /* The copy and explorer buttons only sit beside the first rows. */
-  margin-right: -48px;
-}
-
-.signers-pill {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: 1px var(--space-8);
-  border-radius: 999px;
-  color: var(--muted);
-  background: var(--surface-2);
-}
-
-.safe-chip {
-  padding-right: 58px;
-}
-
-.safe-chip-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
 }
 
-.network {
-  font-size: var(--text-xs);
+.safe-chip-address {
+  font-size: var(--text-md);
   font-weight: 600;
-  padding: 1px var(--space-8);
-  border-radius: 999px;
+  color: var(--text);
+  letter-spacing: -0.01em;
 }
 
-.network.mainnet {
-  color: var(--mainnet);
-  background: color-mix(in srgb, var(--mainnet) 12%, transparent);
+.safe-chip-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.network.testnet {
-  color: var(--testnet);
-  background: color-mix(in srgb, var(--testnet) 12%, transparent);
+.network-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: var(--space-2);
+}
+
+.network-dot.mainnet {
+  background: var(--mainnet);
+}
+
+.network-dot.testnet {
+  background: var(--testnet);
+}
+
+.safe-chip-chevron {
+  flex: none;
+  color: var(--muted);
+}
+
+.safe-chip-actions {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .nav,
@@ -1815,8 +1824,9 @@ button.large {
   .brand span,
   .nav-item span,
   .sync span,
-  .safe-chip > div,
-  .safe-chip .network {
+  .safe-chip-text,
+  .safe-chip-chevron,
+  .safe-chip .safe-chip-actions {
     display: none;
   }
 
@@ -2809,9 +2819,23 @@ button.safe-chip {
   cursor: pointer;
 }
 
-button.safe-chip:hover,
+button.safe-chip {
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+}
+
+button.safe-chip:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+
 button.safe-chip.open {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+button.safe-chip:hover .safe-chip-chevron,
+button.safe-chip.open .safe-chip-chevron {
+  color: var(--text);
 }
 
 .safe-menu {

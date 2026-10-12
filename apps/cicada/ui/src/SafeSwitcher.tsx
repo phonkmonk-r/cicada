@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { desktop, type SafeSummary, type StatusView } from "./api";
 import { explorer, short } from "./format";
 import { Skeleton } from "./Skeleton";
-import { IconCheck, IconCopy, IconExternal, IconPlus } from "./icons";
+import { IconCheck, IconCopy, IconExternal, IconPlus, IconSelector } from "./icons";
 import { Avatar } from "./ui";
 
 /** The Safe card at the top of the sidebar; in the desktop app it opens a list of the profile's Safes. */
@@ -60,27 +60,28 @@ export function SafeSwitcher({ status, onSwitched, onAdd }: { status: StatusView
 
   const chip = (
     <>
-      <Avatar address={status.safe} size={30} />
-      <div>
-        <div className="safe-chip-name">Safe</div>
-        <div className="mono small">{short(status.safe)}</div>
-      </div>
-      <span className="safe-chip-badges">
-        <span className={`network ${status.chainId === 1 ? "mainnet" : "testnet"}`}>{status.chainId === 1 ? "Ethereum" : status.chainName}</span>
-        <span className="signers-pill" title={`${status.threshold} of ${status.owners.length} signers must sign`}>
-          {status.threshold} of {status.owners.length} signers
+      <Avatar address={status.safe} size={28} />
+      <span className="safe-chip-text">
+        <span className="safe-chip-address mono">{short(status.safe)}</span>
+        <span className="safe-chip-meta">
+          <span className={`network-dot ${status.chainId === 1 ? "mainnet" : "testnet"}`} aria-hidden="true" />
+          <span>{status.chainId === 1 ? "Ethereum" : status.chainName}</span>
+          <span aria-hidden="true">·</span>
+          <span title={`${status.threshold} of ${status.owners.length} signers must sign`}>
+            {status.threshold} of {status.owners.length}
+            <span className="sr-only"> signers</span>
+          </span>
         </span>
       </span>
     </>
   );
-  const actions = <SafeActions safe={status.safe} chainId={status.chainId} />;
   if (!desktop) {
     return (
       <div className="safe-switcher">
         <div className="safe-chip" title={status.safe}>
           {chip}
+          <SafeActions safe={status.safe} chainId={status.chainId} />
         </div>
-        {actions}
       </div>
     );
   }
@@ -89,8 +90,8 @@ export function SafeSwitcher({ status, onSwitched, onAdd }: { status: StatusView
     <div className="safe-switcher" ref={box}>
       <button ref={chipButton} type="button" className={`safe-chip ${open ? "open" : ""}`} title="Switch Safe" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         {chip}
+        <IconSelector className="safe-chip-chevron" width="16" height="16" />
       </button>
-      {actions}
       {open && (
         <div className="safe-menu" role="menu">
           {!safes && !error && (
@@ -130,6 +131,7 @@ export function SafeSwitcher({ status, onSwitched, onAdd }: { status: StatusView
                 </span>
               )}
             </button>
+            <SafeActions safe={safe.safe} chainId={safe.chainId} />
             <button type="button" className="icon-button" title="Forget on this computer" aria-label={`Forget ${short(safe.safe)}`} onClick={() => setForgetting(safe.key)}>
               ✕
             </button>
