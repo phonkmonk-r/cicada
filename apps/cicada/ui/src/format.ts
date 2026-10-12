@@ -16,6 +16,17 @@ export function explorer(chainId: number, kind: "tx" | "address", value: string)
   return base ? `${base}/${kind}/${value}` : undefined;
 }
 
+const SAFE_APP_PREFIXES: Record<number, string> = { 1: "eth", 11155111: "sep" };
+
+/**
+ * The transaction's page in Safe{Wallet} (signers, confirmations, decoded calls), or undefined on chains it does not
+ * serve. A transaction executed at threshold 1 never went to the Transaction Service, so it has a page only once executed.
+ */
+export function safeAppTx(chainId: number, safe: string, safeTxHash: string): string | undefined {
+  const prefix = SAFE_APP_PREFIXES[chainId];
+  return prefix ? `https://app.safe.global/transactions/tx?safe=${prefix}:${safe}&id=multisig_${safe}_${safeTxHash}` : undefined;
+}
+
 /** A balance change with its sign, e.g. "−100 MOCK" or "+0.5 ETH". */
 export function signedAmount(delta: string, decimals: number, symbol: string): string {
   const value = BigInt(delta);

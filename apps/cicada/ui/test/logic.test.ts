@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { validateMnemonic } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 
-import { eth, explorer, short, signedAmount, UNLIMITED_APPROVAL } from "../src/format.js";
+import { eth, explorer, safeAppTx, short, signedAmount, UNLIMITED_APPROVAL } from "../src/format.js";
 import { isSaved, tabLabel } from "../src/lib/browser.js";
 import { executionInFlight, executionTone, nextStep, requestValue, sendingLabel, sendingNote, sendLabel } from "../src/lib/execution.js";
 import { checkedWordCount, checkedWordsMatch, newSeedPhrase, pickCheckedWords, positionsLabel } from "../src/lib/newSeed.js";
@@ -15,6 +15,14 @@ const SAFE = "0x7aC0e2C1b0bD1a5E2a8E1A0F0b8E3c3E6c1BEd02";
 const TWELVE = "abandon ".repeat(11) + "about";
 
 describe("format", () => {
+  it("links a transaction to its page in Safe{Wallet}, only on chains Safe{Wallet} serves", () => {
+    const safe = "0x2717c3B4f1a52d0E9b6D0dC2a0e3B9f1C4e7b4DC";
+    const hash = `0x${"ab".repeat(32)}`;
+    assert.equal(safeAppTx(11155111, safe, hash), `https://app.safe.global/transactions/tx?safe=sep:${safe}&id=multisig_${safe}_${hash}`);
+    assert.match(safeAppTx(1, safe, hash)!, /safe=eth:/);
+    assert.equal(safeAppTx(31337, safe, hash), undefined);
+  });
+
   it("shortens addresses", () => {
     assert.equal(short(SAFE), "0x7aC0…Ed02");
   });

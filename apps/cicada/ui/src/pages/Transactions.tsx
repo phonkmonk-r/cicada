@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { api, type DraftView, type Execution, type QueueItem, type StatusView } from "../api";
-import { explorer, short } from "../format";
+import { explorer, safeAppTx, short } from "../format";
 import { IconAlert, IconCheck, IconCopy, IconExternal, IconInbox, IconPlus } from "../icons";
 import { executionInFlight, executionTone } from "../lib/execution";
 import { Avatar, Badge, Notice, PageHeader, useSoleSigner } from "../components";
@@ -61,6 +61,8 @@ export function Transactions({
           key={execution.safeTxHash}
           initial={execution}
           chainId={status.chainId}
+          safe={status.safe}
+          sole={status.threshold === 1}
           onDismiss={() => {
             dismissedExecutions.add(execution.safeTxHash);
             setDismissed((count) => count + 1);
@@ -225,6 +227,8 @@ function TxCard({
         <button type="button" className="link-button small" aria-expanded={detailsOpen} onClick={() => setDetailsOpen(!detailsOpen)}>
           {detailsOpen ? "Hide details" : "Details"}
         </button>
+        {/* At threshold 1 nothing is posted to the Transaction Service, so Safe{Wallet} has no page until it executes. */}
+        {!sole && <SafeAppLink chainId={status.chainId} safe={status.safe} safeTxHash={item.safeTxHash} />}
       </div>
 
       {detailsOpen && <TxDetails item={item} status={status} />}
@@ -363,7 +367,7 @@ function CopyHash({ hash }: { hash: string }) {
 }
 
 /** An execution whose transaction has left the queue: followed live until it is final, then kept until dismissed. */
-function ExecutionCard({ initial, chainId, onDismiss }: { initial: Execution; chainId: number; onDismiss: () => void }) {
+function ExecutionCard({ initial, chainId, safe, sole, onDismiss }: { initial: Execution; chainId: number; safe: string; sole: boolean; onDismiss: () => void }) {
   const [execution, setExecution] = useState(initial);
   useEffect(() => {
     if (!executionInFlight(execution)) return;
@@ -390,6 +394,7 @@ function ExecutionCard({ initial, chainId, onDismiss }: { initial: Execution; ch
       <ExecutionStatus execution={execution} chainId={chainId} />
       {!executionInFlight(execution) && (
         <div className="tx-footer">
+          {(!sole || execution.status === "success" || execution.status === "reverted") && <SafeAppLink chainId={chainId} safe={safe} safeTxHash={execution.safeTxHash} />}
           <button type="button" onClick={onDismiss}>
             Dismiss
           </button>
@@ -437,3 +442,17 @@ function ExecutionStatus({ execution, chainId }: { execution: Execution; chainId
   );
 }
 
+
+/** Opens the transaction in Safe{Wallet}, for its full details there; nothing on chains Safe{Wallet} does not serve. */
+function SafeAppLink({ chainId, safe, safeTxHash }: { chainId: number; safe: string; safeTxHash: string }) {
+  const link = safeAppTx(chainId, safe, safeTxHash);
+  if (!link) return null;
+  return (
+    <>
+      <span className="tx-meta-sep" />
+      <a className="link-button small safe-app-link" href={link} target="_blank" rel="noreferrer">
+        View in Safe <IconExternal width="12" height="12" />
+      </a>
+    </>
+  );
+}

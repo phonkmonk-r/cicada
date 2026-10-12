@@ -1777,6 +1777,21 @@ button.large {
   margin-top: var(--space-16);
 }
 
+.safe-app-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* In a card's footer the link sits at the left, apart from the buttons. */
+.tx-footer .tx-meta-sep {
+  display: none;
+}
+
+.tx-footer .safe-app-link {
+  margin-right: auto;
+}
+
 .review {
   margin-top: var(--space-16);
   padding: var(--space-16) var(--space-16);

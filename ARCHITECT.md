@@ -359,7 +359,7 @@ React, built with Vite; the same UI runs in the desktop app (through the preload
 | `Setup.tsx`, `JoinSafe.tsx` | Connect a Safe: join, create (creator room), use an invite (signer room), being added (waiting room). |
 | `SafeSwitcher.tsx` | The Safe card at the top of the sidebar: switch, add, forget Safes. |
 | `pages/Overview.tsx` | This signer's slot, gas account, next keys (manual refill), health findings (skip used keys). |
-| `pages/Transactions.tsx` | Pending transactions with this signer's action, the execution timeline, Speed up and recovery for a stuck execution, Reject on the next transaction, New transaction, and the queue card. |
+| `pages/Transactions.tsx` | Pending transactions (each with View in Safe, its page in Safe{Wallet} on mainnet and Sepolia; at threshold 1 only once executed, since nothing is posted before) with this signer's action, the execution timeline, Speed up and recovery for a stuck execution, Reject on the next transaction, New transaction, and the queue card. |
 | `pages/TxDetails.tsx` | A transaction's Details: each call's target, value, decoded function or selector and data (shortened, click to expand, copy), then the Safe transaction (nonce, operation, safeTxGas, hash, proposer, time, each signature with its slot). |
 | `pages/Recover.tsx` | Replace exposed keys (`Recover`) and reject the next transaction (`Reject`): both preview and propose a force-rotate at the current nonce. |
 | `pages/NewTransaction.tsx`, `pages/ContractCall.tsx` | Send ETH, send a token, call any contract (ABI or raw data), rotate signers. |
