@@ -17,7 +17,7 @@ import {
   type TreeFile,
 } from "@cicada/core";
 import { openLedgerSource, OPERATOR_ACCOUNT, seedSource, type AddressSource } from "@cicada/keys";
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, nativeTheme, shell } from "electron";
 import { defineChain, isHex, type Hex } from "viem";
 import { foundry } from "viem/chains";
 
@@ -795,7 +795,8 @@ function createWindow() {
     minWidth: 420,
     title: APP_NAME,
     icon: iconPath(),
-    backgroundColor: "#f6f7f8",
+    // The page's --bg, so the window does not flash light before the UI paints in dark mode.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#121211" : "#f7f7f5",
     // macOS: no title bar; the window controls float over the app, which provides its own drag areas.
     ...(process.platform === "darwin" ? { titleBarStyle: "hiddenInset" as const, trafficLightPosition: { x: 18, y: 18 } } : {}),
     webPreferences: { preload: join(appRoot(), "desktop/preload.cjs"), contextIsolation: true, sandbox: true, nodeIntegration: false },

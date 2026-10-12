@@ -13,6 +13,7 @@ export function SafeSwitcher({ status, onSwitched, onAdd }: { status: StatusView
   const [error, setError] = useState<string>();
   const [forgetting, setForgetting] = useState<string>();
   const box = useRef<HTMLDivElement>(null);
+  const chipButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open || !desktop) return;
@@ -21,8 +22,17 @@ export function SafeSwitcher({ status, onSwitched, onAdd }: { status: StatusView
     const close = (event: MouseEvent) => {
       if (box.current && !box.current.contains(event.target as Node)) setOpen(false);
     };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      chipButton.current?.focus();
+    };
     window.addEventListener("mousedown", close);
-    return () => window.removeEventListener("mousedown", close);
+    window.addEventListener("keydown", escape);
+    return () => {
+      window.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", escape);
+    };
   }, [open]);
 
   async function forget(key: string) {
@@ -77,7 +87,7 @@ export function SafeSwitcher({ status, onSwitched, onAdd }: { status: StatusView
 
   return (
     <div className="safe-switcher" ref={box}>
-      <button type="button" className={`safe-chip ${open ? "open" : ""}`} title="Switch Safe" onClick={() => setOpen(!open)}>
+      <button ref={chipButton} type="button" className={`safe-chip ${open ? "open" : ""}`} title="Switch Safe" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         {chip}
       </button>
       {actions}

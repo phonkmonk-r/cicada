@@ -369,6 +369,12 @@ describe("Cicada desktop app", { skip, timeout: 5 * TIMEOUT }, () => {
     };
     await addSafe(second.safe);
 
+    // Escape closes the menu and hands focus back to the Safe card.
+    await openMenu();
+    await page.keyboard.press("Escape");
+    await page.getByRole("menu").waitFor({ state: "detached" });
+    assert.equal(await page.getByTitle("Switch Safe").evaluate((el) => el === document.activeElement), true);
+
     // A review of a transfer from the first Safe (where the app is the only signer, so it would execute at once)...
     await switchTo(first);
     await page.getByTitle("Switch Safe").getByText("1 of 3 signers").waitFor();
