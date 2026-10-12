@@ -66,7 +66,7 @@ apps/cicada/ui/                  React UI (shared by the desktop app and the loc
 apps/cicada/test/                session tests on a local Anvil chain with real Safe and guard contracts
 apps/cicada/ui/test/             unit tests for the UI's logic (apps/cicada/ui/src/lib)
 apps/cicada/e2e/                 the desktop app driven by Playwright against Anvil and a fake Transaction Service
-deployments/sepolia.json         deployed addresses on Sepolia
+contracts/deployments/sepolia.json         deployed addresses on Sepolia
 PLAN.md                          design, decisions, progress
 ```
 
